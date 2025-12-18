@@ -1,73 +1,60 @@
-# React + TypeScript + Vite
+# btop
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web-based system monitor built with React, TypeScript, and Vite. Inspired by the popular [btop](https://github.com/aristocratos/btop) command-line tool, this application provides real-time monitoring of system resources in your browser.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Real-time CPU usage graphs with per-core breakdown
+- Memory usage monitoring and visualization
+- Process table with filtering capabilities
+- Environment variables panel for system diagnostics
+- Configurable refresh rate
+- Dark theme optimized for monitoring
 
-## React Compiler
+## btop quiet
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+This repository uses **btop quiet** mode, which disables graph line smoothing for a cleaner, more accurate visualization. The graphs use linear interpolation (`type="linear"`) instead of smooth curves, providing:
 
-## Expanding the ESLint configuration
+- More accurate representation of actual metric values
+- Reduced visual noise and distractions
+- Sharper, more precise data points
+- Better performance with less rendering overhead
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Getting Started
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Prerequisites
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- [Bun](https://bun.sh/) runtime installed
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Installation
+
+```bash
+bun install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Running the Application
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+Start both the server and frontend:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+bun run start
 ```
+
+Or run them separately:
+
+```bash
+# Start the backend server
+bun run server
+
+# Start the frontend dev server
+bun run dev
+```
+
+The application will be available at `http://localhost:5173`.
+
+## Tech Stack
+
+- **Frontend**: React 19, TypeScript, Vite
+- **Charts**: Recharts
+- **Backend**: Bun
+- **Styling**: CSS
