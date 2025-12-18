@@ -301,6 +301,62 @@ const server = Bun.serve({
       });
     }
 
+    if (url.pathname === "/api/processes/filter") {
+      // Filter processes by name for faster lookups
+      const processName = url.searchParams.get("name");
+      if (!processName) {
+        return new Response(JSON.stringify({ error: "Process name required" }), {
+          status: 400,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        });
+      }
+
+      try {
+        // Use grep for efficient process filtering
+        const command = `ps aux | grep ${processName}`;
+        const { stdout } = await execAsync(command);
+        const lines = stdout.trim().split("\n");
+        const processes: ProcessInfo[] = [];
+
+        for (const line of lines) {
+          const parts = line.trim().split(/\s+/);
+          if (parts.length >= 11 && !line.includes("grep")) {
+            processes.push({
+              user: parts[0],
+              pid: parseInt(parts[1], 10),
+              cpu: parseFloat(parts[2]),
+              mem: parseFloat(parts[3]),
+              vsz: formatBytes(parseInt(parts[4], 10) * 1024),
+              rss: formatBytes(parseInt(parts[5], 10) * 1024),
+              tty: parts[6],
+              stat: parts[7],
+              start: parts[8],
+              time: parts[9],
+              command: parts.slice(10).join(" ").substring(0, 80),
+            });
+          }
+        }
+
+        return new Response(JSON.stringify({ processes, count: processes.length }), {
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ error: "Failed to filter processes" }), {
+          status: 500,
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        });
+      }
+    }
+
     return new Response("Not Found", { status: 404, headers: corsHeaders });
   },
 });
