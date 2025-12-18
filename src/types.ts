@@ -29,6 +29,7 @@ export interface SystemMetrics {
   cpuCount: number;
   cpuModel: string;
   cpuUsage: CpuUsage[];
+  cpuFrequency?: number; // Current CPU frequency in MHz
   totalMem: number;
   freeMem: number;
   usedMem: number;

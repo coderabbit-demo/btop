@@ -5,6 +5,7 @@ interface HeaderProps {
   uptime: number;
   loadAvg: number[];
   processCount: number;
+  cpuFrequency?: number;
 }
 
 function formatUptime(seconds: number): string {
@@ -20,7 +21,7 @@ function formatUptime(seconds: number): string {
   return parts.join(' ');
 }
 
-export function Header({ hostname, platform, arch, uptime, loadAvg, processCount }: HeaderProps) {
+export function Header({ hostname, platform, arch, uptime, loadAvg, processCount, cpuFrequency }: HeaderProps) {
   return (
     <div className="header">
       <div className="header-left">
@@ -37,6 +38,11 @@ export function Header({ hostname, platform, arch, uptime, loadAvg, processCount
         <span className="uptime">
           Uptime: <span className="value">{formatUptime(uptime)}</span>
         </span>
+        {cpuFrequency && (
+          <span className="cpu-freq">
+            CPU: <span className="value">{cpuFrequency.toFixed(0)} MHz</span>
+          </span>
+        )}
       </div>
       <div className="header-right">
         <span className="load-avg">

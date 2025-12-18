@@ -35,6 +35,7 @@ interface SystemMetrics {
   cpuCount: number;
   cpuModel: string;
   cpuUsage: CpuUsage[];
+  cpuFrequency?: number; // Current CPU frequency in MHz
   totalMem: number;
   freeMem: number;
   usedMem: number;
@@ -143,6 +144,42 @@ function formatBytes(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + sizes[i];
 }
 
+/**
+ * Get current CPU frequency from /proc/cpuinfo
+ * According to procfs documentation, the "cpu MHz" field in /proc/cpuinfo
+ * represents the current instantaneous CPU frequency in megahertz.
+ * See: https://www.kernel.org/doc/Documentation/filesystems/proc.txt
+ */
+async function getCpuFrequency(): Promise<number | undefined> {
+  const os = platform();
+
+  if (os !== "linux") {
+    // CPU frequency reading from /proc/cpuinfo is only available on Linux
+    return undefined;
+  }
+
+  try {
+    const { stdout } = await execAsync("cat /proc/cpuinfo");
+    const lines = stdout.split("\n");
+
+    // Find the first "cpu MHz" line to get current frequency
+    // Format: "cpu MHz		: 2400.000"
+    for (const line of lines) {
+      if (line.startsWith("cpu MHz")) {
+        const match = line.match(/:\s*([\d.]+)/);
+        if (match) {
+          return parseFloat(match[1]);
+        }
+      }
+    }
+
+    return undefined;
+  } catch (error) {
+    console.error("Error reading CPU frequency from /proc/cpuinfo:", error);
+    return undefined;
+  }
+}
+
 async function getMemoryInfo(): Promise<{ total: number; free: number; used: number; percent: number }> {
   const totalMemory = totalmem();
   const os = platform();
@@ -232,6 +269,7 @@ async function getSystemMetrics(): Promise<SystemMetrics> {
   const cpuInfo = cpus();
   const memInfo = await getMemoryInfo();
   const processes = await getProcesses();
+  const cpuFrequency = await getCpuFrequency();
 
   return {
     hostname: hostname(),
@@ -242,6 +280,7 @@ async function getSystemMetrics(): Promise<SystemMetrics> {
     cpuCount: cpuInfo.length,
     cpuModel: cpuInfo[0]?.model || "Unknown",
     cpuUsage: getCpuUsage(),
+    cpuFrequency,
     totalMem: memInfo.total,
     freeMem: memInfo.free,
     usedMem: memInfo.used,
