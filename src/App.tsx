@@ -50,6 +50,7 @@ function App() {
         uptime={metrics.uptime}
         loadAvg={metrics.loadAvg}
         processCount={metrics.processCount}
+        cpuFrequency={metrics.cpuFrequency}
       />
 
       <div className="metrics-panel">
