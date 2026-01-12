@@ -10,6 +10,9 @@ reviews:
     path_instructions:
       - path: "**/*"
         instructions: |-
+          When creating nitpick comments please open the details dropdown on the individual
+          nitpick comments by default. You can do this by putting <details open></details>
+          tag on the individual nitpick comments
           Only comment on issues that would block merging — ignore minor or stylistic
           concerns. Restrict feedback to errors, security risks, or functionality-breaking
           problems. Do not post comments on code style, formatting, or non-critical
