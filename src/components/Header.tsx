@@ -22,16 +22,19 @@ function formatUptime(seconds: number): string {
   return parts.join(' ');
 }
 
+function formatUTCTime(date: Date): string {
+  return date.toISOString().slice(11, 19) + ' UTC';
+}
+
 export function Header({ hostname, platform, arch, uptime, loadAvg, processCount }: HeaderProps) {
-  const [sessionStartTime] = useState(() => Date.now());
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [utcTime, setUtcTime] = useState(() => formatUTCTime(new Date()));
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - sessionStartTime) / 1000));
+      setUtcTime(formatUTCTime(new Date()));
     }, 1000);
     return () => clearInterval(interval);
-  }, [sessionStartTime]);
+  }, []);
 
   return (
     <div className="header">
@@ -50,7 +53,7 @@ export function Header({ hostname, platform, arch, uptime, loadAvg, processCount
           Uptime: <span className="value">{formatUptime(uptime)}</span>
         </span>
         <span className="session-timer">
-          Session: <span className="value">{formatUptime(elapsedSeconds)}</span>
+          Time: <span className="value">{utcTime}</span>
         </span>
       </div>
       <div className="header-right">
