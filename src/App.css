@@ -188,14 +188,22 @@ body {
 
 .uptime,
 .load-avg,
-.proc-count {
+.proc-count,
+.session-timer {
   color: var(--color-text-dim);
+  font-family: var(--font-mono);
 }
 
 .uptime .value,
 .load-avg .value,
 .proc-count .value {
   color: var(--color-blue);
+  margin-left: 6px;
+  font-weight: 600;
+}
+
+.session-timer .value {
+  color: var(--color-cyan);
   margin-left: 6px;
   font-weight: 600;
 }

@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 interface HeaderProps {
   hostname: string;
   platform: string;
@@ -21,6 +23,16 @@ function formatUptime(seconds: number): string {
 }
 
 export function Header({ hostname, platform, arch, uptime, loadAvg, processCount }: HeaderProps) {
+  const [sessionStartTime] = useState(() => Date.now());
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - sessionStartTime) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [sessionStartTime]);
+
   return (
     <div className="header">
       <div className="header-left">
@@ -36,6 +48,9 @@ export function Header({ hostname, platform, arch, uptime, loadAvg, processCount
       <div className="header-center">
         <span className="uptime">
           Uptime: <span className="value">{formatUptime(uptime)}</span>
+        </span>
+        <span className="session-timer">
+          Session: <span className="value">{formatUptime(elapsedSeconds)}</span>
         </span>
       </div>
       <div className="header-right">
