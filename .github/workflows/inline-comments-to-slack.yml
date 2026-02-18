@@ -8,22 +8,145 @@ on:
 jobs:
   notify-slack:
     runs-on: ubuntu-latest
+    env:
+      SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+      SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
     steps:
-      - name: Send to Slack
-        uses: slackapi/slack-github-action@v2
-        with:
-          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
-          webhook-type: incoming-webhook
-          payload: |
-            {
-              "text": "New inline comment on <${{ github.event.comment.html_url }}|PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}>",
-              "blocks": [
+      - name: Find PR thread in Slack
+        id: find-thread
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          REPO_FULL="${{ github.repository }}"
+
+          # Search channel history for the original GitHub app message about this PR
+          # Look through recent messages for one containing the PR URL or PR reference
+          CURSOR=""
+          THREAD_TS=""
+
+          for i in 1 2 3 4 5; do
+            if [ -n "$CURSOR" ]; then
+              RESPONSE=$(curl -s -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+                "https://slack.com/api/conversations.history?channel=$SLACK_CHANNEL_ID&limit=50&cursor=$CURSOR")
+            else
+              RESPONSE=$(curl -s -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+                "https://slack.com/api/conversations.history?channel=$SLACK_CHANNEL_ID&limit=50")
+            fi
+
+            # Look for messages from the official GitHub app that mention this PR
+            # The official GitHub app posts messages containing the PR URL like:
+            # github.com/org/repo/pull/123 or "#123 PR Title"
+            THREAD_TS=$(echo "$RESPONSE" | jq -r --arg pr_num "#${PR_NUMBER} " --arg pr_title "$PR_TITLE" '
+              .messages[] |
+              select(
+                (.bot_profile.name == "GitHub" or .username == "GitHub") and
+                (
+                  (.text // "" | contains($pr_num)) or
+                  (.text // "" | contains($pr_title)) or
+                  (.attachments // [] | .[].text // "" | contains($pr_num)) or
+                  (.attachments // [] | .[].text // "" | contains($pr_title)) or
+                  (.blocks // [] | .[].text.text // "" | contains($pr_num)) or
+                  (.blocks // [] | .[].text.text // "" | contains($pr_title))
+                )
+              ) | .ts' 2>/dev/null | head -1)
+
+            if [ -n "$THREAD_TS" ] && [ "$THREAD_TS" != "null" ]; then
+              break
+            fi
+
+            CURSOR=$(echo "$RESPONSE" | jq -r '.response_metadata.next_cursor // empty')
+            if [ -z "$CURSOR" ]; then
+              break
+            fi
+          done
+
+          if [ -n "$THREAD_TS" ] && [ "$THREAD_TS" != "null" ]; then
+            echo "thread_ts=$THREAD_TS" >> "$GITHUB_OUTPUT"
+            echo "Found PR thread: $THREAD_TS"
+          else
+            echo "thread_ts=" >> "$GITHUB_OUTPUT"
+            echo "No existing thread found for PR #$PR_NUMBER"
+          fi
+
+      - name: Post comment to Slack thread
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+          COMMENT_URL="${{ github.event.comment.html_url }}"
+          COMMENT_BODY="${{ github.event.comment.body }}"
+          COMMENT_USER="${{ github.event.comment.user.login }}"
+          COMMENT_USER_URL="${{ github.event.comment.user.html_url }}"
+          COMMENT_PATH="${{ github.event.comment.path }}"
+          COMMENT_LINE="${{ github.event.comment.line }}"
+          REPO_FULL="${{ github.repository }}"
+          THREAD_TS="${{ steps.find-thread.outputs.thread_ts }}"
+
+          # Build the payload matching the official GitHub app's comment format
+          # The official app shows: "Comment on pull request by <user>"
+          # With an attachment containing the PR title and comment body
+          PAYLOAD=$(jq -n \
+            --arg channel "$SLACK_CHANNEL_ID" \
+            --arg thread_ts "$THREAD_TS" \
+            --arg comment_url "$COMMENT_URL" \
+            --arg comment_user "$COMMENT_USER" \
+            --arg comment_user_url "$COMMENT_USER_URL" \
+            --arg pr_number "$PR_NUMBER" \
+            --arg pr_title "$PR_TITLE" \
+            --arg pr_url "$PR_URL" \
+            --arg comment_body "$COMMENT_BODY" \
+            --arg comment_path "$COMMENT_PATH" \
+            --arg comment_line "$COMMENT_LINE" \
+            --arg repo_full "$REPO_FULL" \
+            '{
+              channel: $channel,
+              unfurl_links: false,
+              unfurl_media: false,
+              text: "<\($comment_url)|Comment> on pull request by <\($comment_user_url)|\($comment_user)>",
+              blocks: [
                 {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*New inline comment* by <${{ github.event.comment.user.html_url }}|${{ github.event.comment.user.login }}> on <${{ github.event.comment.html_url }}|PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}>\n\n`${{ github.event.comment.path }}` (line ${{ github.event.comment.line }})\n\n> ${{ github.event.comment.body }}"
+                  type: "section",
+                  text: {
+                    type: "mrkdwn",
+                    text: "<\($comment_url)|Comment> on pull request by <\($comment_user_url)|\($comment_user)>"
                   }
                 }
+              ],
+              attachments: [
+                {
+                  color: "#24292e",
+                  blocks: [
+                    {
+                      type: "section",
+                      text: {
+                        type: "mrkdwn",
+                        text: "<\($pr_url)|#\($pr_number) \($pr_title)>\n`\($comment_path)` (line \($comment_line))\n\($comment_body)"
+                      }
+                    },
+                    {
+                      type: "context",
+                      elements: [
+                        {
+                          type: "mrkdwn",
+                          text: "\($repo_full)"
+                        }
+                      ]
+                    }
+                  ]
+                }
               ]
-            }
+            } | if $thread_ts != "" then .thread_ts = $thread_ts else . end')
+
+          RESPONSE=$(curl -s -X POST \
+            -H "Authorization: Bearer $SLACK_BOT_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$PAYLOAD" \
+            "https://slack.com/api/chat.postMessage")
+
+          OK=$(echo "$RESPONSE" | jq -r '.ok')
+          if [ "$OK" != "true" ]; then
+            echo "Error posting to Slack: $(echo "$RESPONSE" | jq -r '.error')"
+            exit 1
+          fi
+
+          echo "Comment posted successfully"
