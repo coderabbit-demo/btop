@@ -1,0 +1,29 @@
+name: Notify Slack on Inline Review Comments
+
+on:
+  pull_request_review_comment:
+    types:
+      - created
+
+jobs:
+  notify-slack:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send to Slack
+        uses: slackapi/slack-github-action@v2
+        with:
+          webhook: ${{ secrets.SLACK_WEBHOOK_URL }}
+          webhook-type: incoming-webhook
+          payload: |
+            {
+              "text": "New inline comment on <${{ github.event.comment.html_url }}|PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}>",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*New inline comment* by <${{ github.event.comment.user.html_url }}|${{ github.event.comment.user.login }}> on <${{ github.event.comment.html_url }}|PR #${{ github.event.pull_request.number }}: ${{ github.event.pull_request.title }}>\n\n`${{ github.event.comment.path }}` (line ${{ github.event.comment.line }})\n\n> ${{ github.event.comment.body }}"
+                  }
+                }
+              ]
+            }
