@@ -4,6 +4,7 @@ import {
   Area,
   XAxis,
   YAxis,
+  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
@@ -65,16 +66,17 @@ export function CpuGraph({ cpuUsage }: CpuGraphProps) {
         </span>
       </div>
       <div className="graph-container">
-        <ResponsiveContainer width="100%" height={120}>
+        <ResponsiveContainer width="100%" height={160}>
           <AreaChart data={history} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
             <defs>
               {cpuUsage.map((cpu, i) => (
                 <linearGradient key={cpu.core} id={`cpuGradient${cpu.core}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.6} />
-                  <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.1} />
+                  <stop offset="0%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.8} />
+                  <stop offset="100%" stopColor={COLORS[i % COLORS.length]} stopOpacity={0.05} />
                 </linearGradient>
               ))}
             </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
             <XAxis dataKey="time" hide />
             <YAxis domain={[0, 100]} hide />
             <Tooltip
@@ -93,11 +95,11 @@ export function CpuGraph({ cpuUsage }: CpuGraphProps) {
             {cpuUsage.map((cpu, i) => (
               <Area
                 key={cpu.core}
-                type="linear"
+                type="monotone"
                 dataKey={`cpu${cpu.core}`}
                 stroke={COLORS[i % COLORS.length]}
                 fill={`url(#cpuGradient${cpu.core})`}
-                strokeWidth={1.5}
+                strokeWidth={2}
                 dot={false}
                 isAnimationActive={false}
               />
