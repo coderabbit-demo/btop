@@ -1,0 +1,8 @@
+reviews:
+  path_instructions:
+    - path: "src/components/**"
+      instructions: "Review React components for accessibility, proper use of hooks, and consistent naming conventions."
+    - path: "server/**"
+      instructions: "Check for proper error handling, input validation, and secure API practices."
+    - path: "src/hooks/**"
+      instructions: "Ensure custom hooks follow the Rules of Hooks and have clear return types."
