@@ -21,14 +21,15 @@ export function Navbar({ appName = 'btop' }: NavbarProps) {
         <span className="navbar-title">{appName}</span>
       </div>
 
-      <ul className="navbar-nav">
+      <ul className="navbar-nav" role="tablist">
         {navItems.map((item) => (
           <li key={item.id}>
             <button
               className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
               onClick={() => setActiveTab(item.id)}
+              aria-current={activeTab === item.id ? 'page' : undefined}
             >
-              <span className="nav-icon">{item.icon}</span>
+              <span className="nav-icon" aria-hidden="true">{item.icon}</span>
               <span className="nav-label">{item.label}</span>
             </button>
           </li>
