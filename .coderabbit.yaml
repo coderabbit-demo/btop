@@ -1,4 +1,5 @@
 reviews:
+  review_details: true
   path_instructions:
     - path: "src/components/**"
       instructions: "Review React components for accessibility, proper use of hooks, and consistent naming conventions."
