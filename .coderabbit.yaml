@@ -1,5 +1,12 @@
+enable_free_tier: true
 reviews:
   review_details: true
+knowledge_base:
+  opt_out: false
+  learnings:
+    scope: auto
+    inheritance:
+      enabled: true
   path_instructions:
     - path: "src/components/**"
       instructions: "Review React components for accessibility, proper use of hooks, and consistent naming conventions."
