@@ -29,7 +29,7 @@ export function MemoryBar({ label, used, total, percent }: MemoryBarProps) {
   };
 
   return (
-    <div className="memory-bar">
+    <div className="memory-bar" role="meter" aria-label={label} aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
       <span className="mem-label">{label}</span>
       <span className="bar-bracket">[</span>
       <span
