@@ -1,6 +1,5 @@
 enable_free_tier: true
-inheritance:
-  enabled: true
+inheritance: true
 reviews:
   review_details: true
   path_instructions:
