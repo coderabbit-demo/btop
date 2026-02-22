@@ -21,7 +21,9 @@ export function StatusBar({ filter, onFilterChange, refreshRate, onRefreshRateCh
     <div className="status-bar">
       <div className="filter-section">
         <span className="filter-label">Filter:</span>
+        <label htmlFor="process-filter" className="sr-only">Filter processes</label>
         <input
+          id="process-filter"
           type="text"
           className="filter-input"
           value={filter}
@@ -31,7 +33,9 @@ export function StatusBar({ filter, onFilterChange, refreshRate, onRefreshRateCh
       </div>
       <div className="refresh-section">
         <span className="refresh-label">Refresh:</span>
+        <label htmlFor="refresh-rate" className="sr-only">Refresh rate</label>
         <select
+          id="refresh-rate"
           className="refresh-select"
           value={refreshRate}
           onChange={(e) => onRefreshRateChange(Number(e.target.value))}
