@@ -1,4 +1,4 @@
-# Btop
+# btop
 
 A web-based system monitor built with React, TypeScript, and Vite. Inspired by the popular [btop](https://github.com/aristocratos/btop) command-line tool, this app provides real-time monitoring of system resources in your browser!
 
