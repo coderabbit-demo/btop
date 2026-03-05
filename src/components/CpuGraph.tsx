@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   AreaChart,
   Area,
@@ -36,6 +36,16 @@ const COLORS = [
 
 export function CpuGraph({ cpuUsage }: CpuGraphProps) {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [isHovered, setIsHovered] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    e.currentTarget.style.setProperty('--mouse-x', `${x}%`);
+    e.currentTarget.style.setProperty('--mouse-y', `${y}%`);
+  }, []);
 
   useEffect(() => {
     const newPoint: HistoryPoint = { time: Date.now() };
@@ -57,7 +67,13 @@ export function CpuGraph({ cpuUsage }: CpuGraphProps) {
     : 0;
 
   return (
-    <div className="cpu-graph">
+    <div
+      className={`cpu-graph${isHovered ? ' graph-hovered' : ''}`}
+      ref={containerRef}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onMouseMove={handleMouseMove}
+    >
       <div className="graph-header">
         <span className="graph-title">CPU</span>
         <span className="graph-value" style={{ color: getUsageColor(avgUsage) }}>

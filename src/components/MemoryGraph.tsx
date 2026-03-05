@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   AreaChart,
   Area,
@@ -32,6 +32,16 @@ function formatBytes(bytes: number): string {
 
 export function MemoryGraph({ used, total, percent }: MemoryGraphProps) {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [isHovered, setIsHovered] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    e.currentTarget.style.setProperty('--mouse-x', `${x}%`);
+    e.currentTarget.style.setProperty('--mouse-y', `${y}%`);
+  }, []);
 
   useEffect(() => {
     const newPoint: HistoryPoint = {
@@ -59,7 +69,13 @@ export function MemoryGraph({ used, total, percent }: MemoryGraphProps) {
   const color = getMemoryColor(percent);
 
   return (
-    <div className="memory-graph">
+    <div
+      className={`memory-graph${isHovered ? ' graph-hovered' : ''}`}
+      ref={containerRef}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onMouseMove={handleMouseMove}
+    >
       <div className="graph-header">
         <span className="graph-title">Memory</span>
         <span className="graph-value" style={{ color }}>
