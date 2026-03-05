@@ -450,6 +450,34 @@ body {
 .col-time { width: 60px; color: var(--color-text-dim); }
 .col-command { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* Status Indicator */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-green);
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+.status-dot.active {
+  opacity: 1;
+  box-shadow: 0 0 8px var(--color-green), 0 0 16px rgba(52, 211, 153, 0.4);
+}
+
+.status-text {
+  color: var(--color-green);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
 /* Status Bar */
 .status-bar {
   display: flex;
