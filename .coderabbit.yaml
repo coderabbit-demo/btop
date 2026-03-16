@@ -14,3 +14,4 @@ reviews:
           security.
 chat:
   art: false
+  allow_non_org_members: false
