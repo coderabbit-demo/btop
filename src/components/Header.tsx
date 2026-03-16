@@ -7,6 +7,7 @@ interface HeaderProps {
   uptime: number;
   loadAvg: number[];
   processCount: number;
+  paused?: boolean;
 }
 
 function formatUptime(seconds: number): string {
@@ -22,7 +23,7 @@ function formatUptime(seconds: number): string {
   return parts.join(' ');
 }
 
-export function Header({ hostname, platform, arch, uptime, loadAvg, processCount }: HeaderProps) {
+export function Header({ hostname, platform, arch, uptime, loadAvg, processCount, paused }: HeaderProps) {
   const [sessionStartTime] = useState(() => Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
@@ -54,6 +55,7 @@ export function Header({ hostname, platform, arch, uptime, loadAvg, processCount
         </span>
       </div>
       <div className="header-right">
+        {paused && <span className="paused-indicator">PAUSED</span>}
         <span className="load-avg">
           Load: <span className="value">{loadAvg.map(l => l.toFixed(2)).join(' ')}</span>
         </span>

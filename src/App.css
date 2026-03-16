@@ -470,6 +470,41 @@ body {
   gap: 10px;
 }
 
+.pause-button {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--color-text);
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s, color 0.2s;
+}
+
+.pause-button:hover {
+  border-color: var(--color-cyan);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.2);
+}
+
+.pause-button.paused {
+  color: var(--color-yellow);
+  border-color: var(--color-yellow);
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+}
+
+.paused-indicator {
+  color: var(--color-yellow);
+  font-weight: bold;
+  font-size: 11px;
+  letter-spacing: 2px;
+  animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
 .filter-label,
 .refresh-label {
   color: var(--color-text-dim);

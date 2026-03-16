@@ -32,6 +32,7 @@ export function useSystemMetrics(refreshRate: number): UseSystemMetricsResult {
   }, []);
 
   useEffect(() => {
+    if (refreshRate === 0) return; // paused
     fetchMetrics();
     const interval = setInterval(fetchMetrics, refreshRate);
     return () => clearInterval(interval);
