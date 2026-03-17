@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Navbar } from './components/Navbar';
 import { Header } from './components/Header';
 import { CpuGraph } from './components/CpuGraph';
 import { MemoryGraph } from './components/MemoryGraph';
@@ -56,6 +57,7 @@ function App() {
 
   return (
     <div className="app">
+      <Navbar />
       <Header
         hostname={metrics.hostname}
         platform={metrics.platform}
