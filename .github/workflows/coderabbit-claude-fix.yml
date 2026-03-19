@@ -1,0 +1,84 @@
+name: Fix CodeRabbit Issues with Claude Code
+
+on:
+  pull_request_review_comment:
+    types:
+      - created
+
+jobs:
+  fix-coderabbit-issues:
+    # Only run for CodeRabbit bot comments that contain an AI agent prompt
+    if: >
+      github.event.comment.user.login == 'coderabbitai[bot]' &&
+      contains(github.event.comment.body, '🤖 Prompt for AI Agents')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+
+      - name: Extract AI agent prompt from CodeRabbit comment
+        id: extract-prompt
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.comment.body;
+
+            // Extract the prompt from the "🤖 Prompt for AI Agents" section
+            const promptMatch = body.match(/🤖 Prompt for AI Agents\s*<\/summary>\s*\n\s*```\n([\s\S]*?)```/);
+            if (!promptMatch) {
+              core.setFailed('Could not extract AI agent prompt from CodeRabbit comment');
+              return;
+            }
+
+            const prompt = promptMatch[1].trim();
+            const filePath = context.payload.comment.path;
+            const startLine = context.payload.comment.start_line || context.payload.comment.line;
+            const endLine = context.payload.comment.line;
+            const commentUrl = context.payload.comment.html_url;
+
+            core.setOutput('prompt', prompt);
+            core.setOutput('file_path', filePath);
+            core.setOutput('start_line', startLine);
+            core.setOutput('end_line', endLine);
+            core.setOutput('comment_url', commentUrl);
+
+      - name: Run Claude Code to fix the issue
+        id: claude-fix
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            A CodeRabbit code review found an issue in this pull request. Please fix it.
+
+            File: ${{ steps.extract-prompt.outputs.file_path }}
+            Lines: ${{ steps.extract-prompt.outputs.start_line }}-${{ steps.extract-prompt.outputs.end_line }}
+
+            CodeRabbit's instructions:
+            ${{ steps.extract-prompt.outputs.prompt }}
+
+            Important:
+            - Only modify the file(s) mentioned in the instructions.
+            - Follow the existing code style and conventions.
+            - Make the minimal change necessary to fix the issue.
+            - Do not introduce new dependencies unless absolutely required.
+          allowed_tools: "Edit,Read,Glob,Grep,Bash(git diff:*),Bash(git log:*),Bash(git status)"
+          timeout_minutes: 10
+
+      - name: React to CodeRabbit comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Add a 👀 reaction to acknowledge the comment was processed
+            await github.rest.reactions.createForPullRequestReviewComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'eyes'
+            });
