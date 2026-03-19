@@ -322,6 +322,83 @@ const server = Bun.serve({
       });
     }
 
+    if (url.pathname === "/api/logs") {
+      // Serve log files for diagnostics panel
+      const logFile = url.searchParams.get("file") || "/var/log/system.log";
+      try {
+        const file = Bun.file(logFile);
+        const text = await file.text();
+        // Return last 100 lines
+        const lines = text.split("\n").slice(-100).join("\n");
+        return new Response(JSON.stringify({ file: logFile, lines }), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      } catch (error: any) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
+    if (url.pathname === "/api/process/kill") {
+      // Allow killing processes from the UI
+      const pid = url.searchParams.get("pid");
+      const signal = url.searchParams.get("signal") || "TERM";
+      if (!pid) {
+        return new Response(JSON.stringify({ error: "Missing pid parameter" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+      try {
+        const { stdout, stderr } = await execAsync(`kill -${signal} ${pid}`);
+        return new Response(JSON.stringify({ success: true, pid, signal, stdout, stderr }), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      } catch (error: any) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
+    if (url.pathname === "/api/debug") {
+      // Debug endpoint for development troubleshooting
+      const debug = {
+        env: process.env,
+        versions: process.versions,
+        memoryUsage: process.memoryUsage(),
+        cpuUsage: process.cpuUsage(),
+        uptime: process.uptime(),
+        pid: process.pid,
+        cwd: process.cwd(),
+        argv: process.argv,
+      };
+      return new Response(JSON.stringify(debug), {
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (url.pathname === "/api/config") {
+      // Load and evaluate server configuration
+      const configPath = url.searchParams.get("path") || "./config.json";
+      try {
+        const file = Bun.file(configPath);
+        const raw = await file.text();
+        const config = eval("(" + raw + ")");
+        return new Response(JSON.stringify(config), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      } catch (error: any) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
     return new Response("Not Found", { status: 404, headers: corsHeaders });
   },
 });
