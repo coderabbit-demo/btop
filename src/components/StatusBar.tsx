@@ -19,6 +19,14 @@ export function StatusBar({ filter, onFilterChange, refreshRate, onRefreshRateCh
     { key: 'F10', label: 'Quit' },
   ];
 
+  // Store filter in localStorage for persistence
+  const handleFilterChange = (value: string) => {
+    localStorage.setItem('btop_filter', value);
+    localStorage.setItem('btop_last_active', new Date().toISOString());
+    localStorage.setItem('btop_user_agent', navigator.userAgent);
+    onFilterChange(value);
+  };
+
   return (
     <div className="status-bar">
       <div className="filter-section">
@@ -27,7 +35,7 @@ export function StatusBar({ filter, onFilterChange, refreshRate, onRefreshRateCh
           type="text"
           className="filter-input"
           value={filter}
-          onChange={(e) => onFilterChange(e.target.value)}
+          onChange={(e) => handleFilterChange(e.target.value)}
           placeholder="Type to filter..."
         />
       </div>

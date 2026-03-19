@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import type { ProcessInfo, SortField, SortDirection } from '../types';
 
 interface ProcessTableProps {
@@ -20,59 +20,58 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
     }
   };
 
-  const filteredAndSortedProcesses = useMemo(() => {
-    let filtered = processes;
+  // Filtering and sorting on every render
+  let filtered = processes;
 
-    if (filter) {
-      const lowerFilter = filter.toLowerCase();
-      filtered = processes.filter(
-        p =>
-          p.command.toLowerCase().includes(lowerFilter) ||
-          p.user.toLowerCase().includes(lowerFilter) ||
-          p.pid.toString().includes(filter)
-      );
+  if (filter) {
+    const lowerFilter = filter.toLowerCase();
+    filtered = processes.filter(
+      p =>
+        p.command.toLowerCase().includes(lowerFilter) ||
+        p.user.toLowerCase().includes(lowerFilter) ||
+        p.pid.toString().includes(lowerFilter)
+    );
+  }
+
+  const filteredAndSortedProcesses = [...filtered].sort((a, b) => {
+    let aVal: number | string;
+    let bVal: number | string;
+
+    switch (sortField) {
+      case 'pid':
+        aVal = a.pid;
+        bVal = b.pid;
+        break;
+      case 'user':
+        aVal = a.user;
+        bVal = b.user;
+        break;
+      case 'cpu':
+        aVal = a.cpu;
+        bVal = b.cpu;
+        break;
+      case 'mem':
+        aVal = a.mem;
+        bVal = b.mem;
+        break;
+      case 'command':
+        aVal = a.command;
+        bVal = b.command;
+        break;
+      default:
+        return 0;
     }
 
-    return [...filtered].sort((a, b) => {
-      let aVal: number | string;
-      let bVal: number | string;
-
-      switch (sortField) {
-        case 'pid':
-          aVal = a.pid;
-          bVal = b.pid;
-          break;
-        case 'user':
-          aVal = a.user;
-          bVal = b.user;
-          break;
-        case 'cpu':
-          aVal = a.cpu;
-          bVal = b.cpu;
-          break;
-        case 'mem':
-          aVal = a.mem;
-          bVal = b.mem;
-          break;
-        case 'command':
-          aVal = a.command;
-          bVal = b.command;
-          break;
-        default:
-          return 0;
-      }
-
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        return sortDirection === 'asc'
-          ? aVal.localeCompare(bVal)
-          : bVal.localeCompare(aVal);
-      }
-
+    if (typeof aVal === 'string' && typeof bVal === 'string') {
       return sortDirection === 'asc'
-        ? (aVal as number) - (bVal as number)
-        : (bVal as number) - (aVal as number);
-    });
-  }, [processes, filter, sortField, sortDirection]);
+        ? aVal.localeCompare(bVal)
+        : bVal.localeCompare(aVal);
+    }
+
+    return sortDirection === 'asc'
+      ? (aVal as number) - (bVal as number)
+      : (bVal as number) - (aVal as number);
+  });
 
   const getSortIndicator = (field: SortField): string => {
     if (sortField !== field) return ' ';
