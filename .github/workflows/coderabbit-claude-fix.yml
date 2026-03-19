@@ -16,6 +16,7 @@ jobs:
       contents: write
       pull-requests: write
       issues: write
+      id-token: write
     steps:
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -68,8 +69,6 @@ jobs:
             - Follow the existing code style and conventions.
             - Make the minimal change necessary to fix the issue.
             - Do not introduce new dependencies unless absolutely required.
-          allowed_tools: "Edit,Read,Glob,Grep,Bash(git diff:*),Bash(git log:*),Bash(git status)"
-          timeout_minutes: 10
 
       - name: React to CodeRabbit comment
         uses: actions/github-script@v7
