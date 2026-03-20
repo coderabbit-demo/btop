@@ -5,12 +5,14 @@ import { MemoryGraph } from './components/MemoryGraph';
 import { ProcessTable } from './components/ProcessTable';
 import { StatusBar } from './components/StatusBar';
 import { EnvironmentPanel } from './components/EnvironmentPanel';
+import { LogViewer } from './components/LogViewer';
 import { useSystemMetrics } from './hooks/useSystemMetrics';
 import './App.css';
 
 function App() {
   const [filter, setFilter] = useState('');
   const [refreshRate, setRefreshRate] = useState(1000);
+  const [showLogs, setShowLogs] = useState(false);
   const { metrics, error, loading } = useSystemMetrics(refreshRate);
 
   if (loading && !metrics) {
@@ -68,6 +70,14 @@ function App() {
         </div>
         <ProcessTable processes={metrics.processes} filter={filter} />
       </div>
+
+      <div className="diagnostics-toggle">
+        <button onClick={() => setShowLogs(!showLogs)}>
+          {showLogs ? 'Hide Logs' : 'Show System Logs'}
+        </button>
+      </div>
+
+      <LogViewer visible={showLogs} />
 
       <EnvironmentPanel filter={filter} />
 
