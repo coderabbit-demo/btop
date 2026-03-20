@@ -25,7 +25,8 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
     setPendingKillPid(pid);
     setKillStatus(`Sending SIGTERM to ${pid}...`);
     try {
-      const res = await fetch('http://localhost:3001/api/process/kill', {
+      const apiBase = process.env.REACT_APP_API_BASE ?? '';
+      const res = await fetch(`${apiBase}/api/process/kill`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ pid, signal: 'SIGTERM' }),
