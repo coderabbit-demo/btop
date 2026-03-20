@@ -324,7 +324,27 @@ const server = Bun.serve({
 
     if (url.pathname === "/api/logs") {
       // Serve log files for diagnostics panel
-      const logFile = url.searchParams.get("file") || "/var/log/system.log";
+      const DIAGNOSTICS_DIR = "/var/log";
+      const requestedFile = url.searchParams.get("file") || "system.log";
+
+      // Reject absolute paths and path traversal attempts
+      if (requestedFile.startsWith("/") || requestedFile.includes("..")) {
+        return new Response(JSON.stringify({ error: "Invalid file path" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      // Resolve to a canonical path and ensure it stays within the diagnostics directory
+      const resolvedPath = require("path").resolve(DIAGNOSTICS_DIR, requestedFile);
+      if (!resolvedPath.startsWith(DIAGNOSTICS_DIR + "/") && resolvedPath !== DIAGNOSTICS_DIR) {
+        return new Response(JSON.stringify({ error: "Invalid file path" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const logFile = resolvedPath;
       try {
         const file = Bun.file(logFile);
         const text = await file.text();
