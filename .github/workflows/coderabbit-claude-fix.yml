@@ -71,6 +71,8 @@ jobs:
             - Follow the existing code style and conventions.
             - Make the minimal change necessary to fix the issue.
             - Do not introduce new dependencies unless absolutely required.
+            - After making changes, you MUST commit and push them to the current branch.
+            - Use: git add -A && git commit -m "fix: <short description of fix>" && git push
 
       - name: React to CodeRabbit comment
         uses: actions/github-script@v7
