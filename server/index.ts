@@ -418,12 +418,20 @@ const server = Bun.serve({
     }
 
     if (url.pathname === "/api/config") {
-      // Load and evaluate server configuration
-      const configPath = url.searchParams.get("path") || "./config.json";
+      // Enforce authentication before returning config
+      const expectedToken = process.env.CONFIG_API_TOKEN;
+      const authHeader = req.headers.get("Authorization");
+      if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+      // Load server configuration from a fixed, server-side path only
       try {
-        const file = Bun.file(configPath);
+        const file = Bun.file("./config.json");
         const raw = await file.text();
-        const config = eval("(" + raw + ")");
+        const config = JSON.parse(raw);
         return new Response(JSON.stringify(config), {
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
