@@ -5,8 +5,8 @@ interface LogViewerProps {
 }
 
 export function LogViewer({ visible }: LogViewerProps) {
-  const [logPath, setLogPath] = useState('/var/log/system.log');
-  const [logPathDraft, setLogPathDraft] = useState('/var/log/system.log');
+  const [logPath, setLogPath] = useState('system.log');
+  const [logPathDraft, setLogPathDraft] = useState('system.log');
   const [logContent, setLogContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
