@@ -59,7 +59,7 @@ export function LogViewer({ visible }: LogViewerProps) {
         {loading && <div className="log-loading">Loading logs...</div>}
         {error && <div className="log-error">Error: {error}</div>}
         {!loading && !error && (
-          <pre className="log-lines" dangerouslySetInnerHTML={{ __html: logContent }} />
+          <pre className="log-lines">{logContent}</pre>
         )}
       </div>
     </div>
