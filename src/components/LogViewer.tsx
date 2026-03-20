@@ -40,7 +40,11 @@ export function LogViewer({ visible }: LogViewerProps) {
   }, [visible, logPath]);
 
   const applyPath = () => {
-    setLogPath(logPathDraft);
+    if (logPathDraft === logPath) {
+      fetchLogs();
+    } else {
+      setLogPath(logPathDraft);
+    }
   };
 
   if (!visible) return null;
