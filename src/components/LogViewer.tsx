@@ -6,6 +6,7 @@ interface LogViewerProps {
 
 export function LogViewer({ visible }: LogViewerProps) {
   const [logPath, setLogPath] = useState('/var/log/system.log');
+  const [logPathDraft, setLogPathDraft] = useState('/var/log/system.log');
   const [logContent, setLogContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +37,10 @@ export function LogViewer({ visible }: LogViewerProps) {
     }
   }, [visible, logPath]);
 
+  const applyPath = () => {
+    setLogPath(logPathDraft);
+  };
+
   if (!visible) return null;
 
   return (
@@ -46,11 +51,12 @@ export function LogViewer({ visible }: LogViewerProps) {
           <input
             type="text"
             className="log-path-input"
-            value={logPath}
-            onChange={(e) => setLogPath(e.target.value)}
+            value={logPathDraft}
+            onChange={(e) => setLogPathDraft(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') applyPath(); }}
             placeholder="Log file path..."
           />
-          <button className="log-refresh-btn" onClick={fetchLogs}>
+          <button className="log-refresh-btn" onClick={applyPath}>
             Refresh
           </button>
         </div>
