@@ -260,7 +260,7 @@ const server = Bun.serve({
     // CORS headers
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     };
 
@@ -361,19 +361,35 @@ const server = Bun.serve({
       }
     }
 
-    if (url.pathname === "/api/process/kill") {
+    if (url.pathname === "/api/process/kill" && req.method === "POST") {
       // Allow killing processes from the UI
-      const pid = url.searchParams.get("pid");
-      const signal = url.searchParams.get("signal") || "TERM";
-      if (!pid) {
-        return new Response(JSON.stringify({ error: "Missing pid parameter" }), {
+      const ALLOWED_SIGNALS = ["SIGTERM", "SIGKILL", "SIGINT"] as const;
+      type AllowedSignal = (typeof ALLOWED_SIGNALS)[number];
+
+      let body: any = {};
+      try {
+        body = await req.json();
+      } catch {
+        return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
           status: 400,
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       }
+
+      const { pid: rawPid, signal: rawSignal } = body;
+      const signal: AllowedSignal = ALLOWED_SIGNALS.includes(rawSignal) ? rawSignal : "SIGTERM";
+      const pid = Number(rawPid);
+
+      if (!rawPid || !Number.isInteger(pid) || pid <= 0) {
+        return new Response(JSON.stringify({ error: "Invalid or missing pid parameter" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
       try {
-        const { stdout, stderr } = await execAsync(`kill -${signal} ${pid}`);
-        return new Response(JSON.stringify({ success: true, pid, signal, stdout, stderr }), {
+        process.kill(pid, signal);
+        return new Response(JSON.stringify({ success: true, pid, signal }), {
           headers: { "Content-Type": "application/json", ...corsHeaders },
         });
       } catch (error: any) {
