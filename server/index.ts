@@ -385,16 +385,32 @@ const server = Bun.serve({
     }
 
     if (url.pathname === "/api/debug") {
-      // Debug endpoint for development troubleshooting
+      // Debug endpoint for development troubleshooting only
+      if (process.env.NODE_ENV !== "development") {
+        return new Response(JSON.stringify({ error: "Not Found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const sensitivePatterns = [
+        "KEY", "SECRET", "TOKEN", "PASSWORD", "CREDENTIAL",
+        "AUTH", "PRIVATE", "API_KEY", "ACCESS_KEY",
+      ];
+      const isSensitive = (name: string): boolean =>
+        sensitivePatterns.some(pattern => name.includes(pattern));
+
+      const filteredEnv = Object.fromEntries(
+        Object.entries(process.env).map(([k, v]) => [k, isSensitive(k) ? "[REDACTED]" : v])
+      );
+
       const debug = {
-        env: process.env,
+        env: filteredEnv,
         versions: process.versions,
         memoryUsage: process.memoryUsage(),
         cpuUsage: process.cpuUsage(),
         uptime: process.uptime(),
         pid: process.pid,
-        cwd: process.cwd(),
-        argv: process.argv,
       };
       return new Response(JSON.stringify(debug), {
         headers: { "Content-Type": "application/json", ...corsHeaders },
