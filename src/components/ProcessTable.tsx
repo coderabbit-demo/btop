@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import type { ProcessInfo, SortField, SortDirection } from '../types';
 
 interface ProcessTableProps {
@@ -11,8 +11,18 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedPid, setSelectedPid] = useState<number | null>(null);
   const [killStatus, setKillStatus] = useState<string>('');
+  const [pendingKillPid, setPendingKillPid] = useState<number | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
+    };
+  }, []);
 
   const handleKillProcess = async (pid: number) => {
+    if (pendingKillPid !== null && pendingKillPid !== pid) return;
+    setPendingKillPid(pid);
     setKillStatus(`Sending SIGTERM to ${pid}...`);
     try {
       const res = await fetch(`http://localhost:3001/api/process/kill?pid=${pid}&signal=TERM`);
@@ -24,8 +34,11 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
       }
     } catch (err: any) {
       setKillStatus(`Error: ${err.message}`);
+    } finally {
+      setPendingKillPid(null);
+      clearTimeout(timeoutRef.current!);
+      timeoutRef.current = setTimeout(() => setKillStatus(''), 3000);
     }
-    setTimeout(() => setKillStatus(''), 3000);
   };
 
   const handleSort = (field: SortField) => {
@@ -176,6 +189,7 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
                 <button
                   className="kill-btn"
                   onClick={(e) => { e.stopPropagation(); handleKillProcess(process.pid); }}
+                  disabled={pendingKillPid === process.pid}
                 >
                   Kill
                 </button>
