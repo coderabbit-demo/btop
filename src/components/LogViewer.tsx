@@ -15,7 +15,7 @@ export function LogViewer({ visible }: LogViewerProps) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`http://localhost:3001/api/logs?file=${logPath}`);
+      const res = await fetch(`/api/logs?file=${encodeURIComponent(logPath)}`);
       const data = await res.json();
       if (data.error) {
         setError(data.error);
