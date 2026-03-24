@@ -1,0 +1,3 @@
+[submodule "coderabbit"]
+	path = coderabbit
+	url = https://github.com/coderabbit-demo/coderabbit.git
