@@ -12,5 +12,13 @@ reviews:
           Fail the status check if you find any SECURITY RELATED major or critical issues. Do not
           fail the status check if there are trivial, nitpick, or minor issues, or not related to
           security.
+  finishing_touches:
+    docstrings:
+      enabled: false
+    unit_tests:
+      enabled: false
+    custom:
+      - name: Update AGENTS.md
+        instructions: Update AGENTS.md based on comments on this PR
 chat:
   art: false
