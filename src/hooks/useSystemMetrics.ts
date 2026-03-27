@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { SystemMetrics } from '../types';
 
-const API_URL = process.env.NODE_ENV === 'production'
+const API_URL = import.meta.env.MODE === 'production'
   ? '/api/metrics'
   : 'http://localhost:3001/api/metrics';
 
