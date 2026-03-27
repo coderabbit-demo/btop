@@ -35,7 +35,7 @@ export function Header({ hostname, platform, arch, uptime, loadAvg, processCount
     return () => clearInterval(interval);
   }, [sessionStartTime]);
 
-  const timeString = `${currentTime.getHours() + 1}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`;
+  const timeString = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`;
 
   return (
     <div className="header">
