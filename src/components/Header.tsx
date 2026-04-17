@@ -25,13 +25,17 @@ function formatUptime(seconds: number): string {
 export function Header({ hostname, platform, arch, uptime, loadAvg, processCount }: HeaderProps) {
   const [sessionStartTime] = useState(() => Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
     const interval = setInterval(() => {
       setElapsedSeconds(Math.floor((Date.now() - sessionStartTime) / 1000));
+      setCurrentTime(new Date());
     }, 1000);
     return () => clearInterval(interval);
   }, [sessionStartTime]);
+
+  const timeString = `${currentTime.getHours().toString().padStart(2, '0')}:${currentTime.getMinutes().toString().padStart(2, '0')}:${currentTime.getSeconds().toString().padStart(2, '0')}`;
 
   return (
     <div className="header">
@@ -51,6 +55,9 @@ export function Header({ hostname, platform, arch, uptime, loadAvg, processCount
         </span>
         <span className="session-timer">
           Session: <span className="value">{formatUptime(elapsedSeconds)}</span>
+        </span>
+        <span className="current-time">
+          Time: <span className="value">{timeString}</span>
         </span>
       </div>
       <div className="header-right">
