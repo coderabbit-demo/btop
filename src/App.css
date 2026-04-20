@@ -219,18 +219,135 @@ body {
 /* Graph Cards */
 .cpu-graph,
 .memory-graph {
+  --mouse-x: 50%;
+  --mouse-y: 50%;
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   transition: border-color 0.3s, box-shadow 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.cpu-graph::before,
+.memory-graph::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle 200px at var(--mouse-x) var(--mouse-y),
+    rgba(96, 165, 250, 0.12) 0%,
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.cpu-graph > *,
+.memory-graph > * {
+  position: relative;
+  z-index: 1;
+}
+
+.cpu-graph:hover::before,
+.memory-graph:hover::before {
+  opacity: 1;
 }
 
 .cpu-graph:hover,
 .memory-graph:hover {
   border-color: var(--border-glow);
   box-shadow: 0 4px 30px rgba(96, 165, 250, 0.15);
+}
+
+/* Pulsating graph effect on hover */
+.cpu-graph.graph-hovered .graph-container,
+.memory-graph.graph-hovered .graph-container {
+  animation: graphPulsate 2s ease-in-out infinite;
+}
+
+.cpu-graph.graph-hovered .graph-value,
+.memory-graph.graph-hovered .graph-value {
+  animation: valuePulsate 1.5s ease-in-out infinite;
+}
+
+.cpu-graph.graph-hovered .core-indicator {
+  animation: corePulsate 2s ease-in-out infinite;
+}
+
+.cpu-graph.graph-hovered .core-indicator:nth-child(odd) {
+  animation-delay: 0.15s;
+}
+
+.cpu-graph.graph-hovered .core-indicator:nth-child(3n) {
+  animation-delay: 0.3s;
+}
+
+.memory-graph.graph-hovered .memory-bar-fill {
+  animation: barPulsate 1.8s ease-in-out infinite;
+}
+
+.memory-graph.graph-hovered .memory-stat .stat-value {
+  animation: valuePulsate 2s ease-in-out infinite;
+}
+
+.memory-graph.graph-hovered .memory-stat:nth-child(2) .stat-value {
+  animation-delay: 0.2s;
+}
+
+.memory-graph.graph-hovered .memory-stat:nth-child(3) .stat-value {
+  animation-delay: 0.4s;
+}
+
+@keyframes graphPulsate {
+  0%, 100% {
+    filter: brightness(1) saturate(1);
+    transform: scale(1);
+  }
+  50% {
+    filter: brightness(1.3) saturate(1.4);
+    transform: scale(1.01);
+  }
+}
+
+@keyframes valuePulsate {
+  0%, 100% {
+    opacity: 1;
+    text-shadow: 0 0 20px currentColor;
+  }
+  50% {
+    opacity: 0.8;
+    text-shadow: 0 0 40px currentColor, 0 0 60px currentColor;
+  }
+}
+
+@keyframes corePulsate {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes barPulsate {
+  0%, 100% {
+    filter: brightness(1);
+    box-shadow: 0 0 20px currentColor;
+  }
+  50% {
+    filter: brightness(1.4);
+    box-shadow: 0 0 35px currentColor, 0 0 50px currentColor;
+  }
 }
 
 .graph-header {
@@ -449,6 +566,113 @@ body {
 .col-state { width: 24px; text-align: center; color: var(--color-yellow); }
 .col-time { width: 60px; color: var(--color-text-dim); }
 .col-command { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Alert Bar */
+.alert-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+  transition: opacity 0.2s ease;
+}
+
+.alert-bar.alert-flash-off {
+  opacity: 0.4;
+}
+
+.alert-bar.alert-info {
+  background: linear-gradient(145deg, rgba(52, 211, 153, 0.1) 0%, rgba(13, 18, 25, 0.8) 100%);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.alert-bar.alert-warn {
+  background: linear-gradient(145deg, rgba(251, 191, 36, 0.1) 0%, rgba(13, 18, 25, 0.8) 100%);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.alert-bar.alert-critical {
+  background: linear-gradient(145deg, rgba(248, 113, 113, 0.15) 0%, rgba(13, 18, 25, 0.8) 100%);
+  border-color: rgba(248, 113, 113, 0.4);
+}
+
+.alert-icon {
+  font-weight: 900;
+  font-size: 12px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.alert-info .alert-icon {
+  color: var(--color-green);
+  background: rgba(52, 211, 153, 0.15);
+}
+
+.alert-warn .alert-icon {
+  color: var(--color-yellow);
+  background: rgba(251, 191, 36, 0.15);
+}
+
+.alert-critical .alert-icon {
+  color: var(--color-red);
+  background: rgba(248, 113, 113, 0.15);
+}
+
+.alert-messages {
+  display: flex;
+  gap: 16px;
+  flex: 1;
+}
+
+.alert-msg {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.alert-msg-info { color: var(--color-green); }
+.alert-msg-warn { color: var(--color-yellow); }
+.alert-msg-critical { color: var(--color-red); }
+
+.alert-timestamp {
+  color: var(--color-text-dim);
+  font-size: 10px;
+  margin-left: auto;
+}
+
+/* Status Indicator */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-green);
+  opacity: 0.3;
+  transition: opacity 0.3s ease;
+}
+
+.status-dot.active {
+  opacity: 1;
+  box-shadow: 0 0 8px var(--color-green), 0 0 16px rgba(52, 211, 153, 0.4);
+}
+
+.status-text {
+  color: var(--color-green);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
 
 /* Status Bar */
 .status-bar {

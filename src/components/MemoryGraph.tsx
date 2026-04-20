@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   AreaChart,
   Area,
@@ -32,6 +32,16 @@ function formatBytes(bytes: number): string {
 
 export function MemoryGraph({ used, total, percent }: MemoryGraphProps) {
   const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [isHovered, setIsHovered] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    e.currentTarget.style.setProperty('--mouse-x', `${x}%`);
+    e.currentTarget.style.setProperty('--mouse-y', `${y}%`);
+  }, []);
 
   useEffect(() => {
     const newPoint: HistoryPoint = {
@@ -59,11 +69,17 @@ export function MemoryGraph({ used, total, percent }: MemoryGraphProps) {
   const color = getMemoryColor(percent);
 
   return (
-    <div className="memory-graph">
+    <div
+      className={`memory-graph${isHovered ? ' graph-hovered' : ''}`}
+      ref={containerRef}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onMouseMove={handleMouseMove}
+    >
       <div className="graph-header">
         <span className="graph-title">Memory</span>
         <span className="graph-value" style={{ color }}>
-          {percent}%
+          {formatBytes(used)} / {formatBytes(total)} ({percent}%)
         </span>
       </div>
       <div className="graph-container">
@@ -113,7 +129,7 @@ export function MemoryGraph({ used, total, percent }: MemoryGraphProps) {
         <div className="memory-stats">
           <span className="memory-stat">
             <span className="stat-label">Used</span>
-            <span className="stat-value" style={{ color }}>{formatBytes(used)}</span>
+            <span className="stat-value" style={{ color }}>{formatBytes(used)} ({percent}%)</span>
           </span>
           <span className="memory-stat">
             <span className="stat-label">Total</span>
@@ -121,7 +137,7 @@ export function MemoryGraph({ used, total, percent }: MemoryGraphProps) {
           </span>
           <span className="memory-stat">
             <span className="stat-label">Free</span>
-            <span className="stat-value" style={{ color: '#34d399' }}>{formatBytes(total - used)}</span>
+            <span className="stat-value" style={{ color: '#34d399' }}>{formatBytes(total - used)} ({total > 0 ? Math.round(((total - used) / total) * 100) : 0}%)</span>
           </span>
         </div>
       </div>

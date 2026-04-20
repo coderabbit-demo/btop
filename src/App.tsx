@@ -4,6 +4,7 @@ import { CpuGraph } from './components/CpuGraph';
 import { MemoryGraph } from './components/MemoryGraph';
 import { ProcessTable } from './components/ProcessTable';
 import { StatusBar } from './components/StatusBar';
+import { AlertBar } from './components/AlertBar';
 import { EnvironmentPanel } from './components/EnvironmentPanel';
 import { useSystemMetrics } from './hooks/useSystemMetrics';
 import './App.css';
@@ -70,6 +71,8 @@ function App() {
       </div>
 
       <EnvironmentPanel filter={filter} />
+
+      <AlertBar cpuUsage={metrics.cpuUsage} memPercent={metrics.memPercent} />
 
       <StatusBar
         filter={filter}
