@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import type { ProcessInfo, SortField, SortDirection } from '../types';
 
 interface ProcessTableProps {
@@ -10,6 +10,41 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
   const [sortField, setSortField] = useState<SortField>('cpu');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedPid, setSelectedPid] = useState<number | null>(null);
+  const [killStatus, setKillStatus] = useState<string>('');
+  const [pendingKillPid, setPendingKillPid] = useState<number | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const handleKillProcess = async (pid: number) => {
+    if (pendingKillPid !== null && pendingKillPid !== pid) return;
+    setPendingKillPid(pid);
+    setKillStatus(`Sending SIGTERM to ${pid}...`);
+    try {
+      const apiBase = process.env.REACT_APP_API_BASE ?? '';
+      const res = await fetch(`${apiBase}/api/process/kill`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pid, signal: 'SIGTERM' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setKillStatus(`Process ${pid} terminated`);
+      } else {
+        setKillStatus(`Failed: ${data.error}`);
+      }
+    } catch (err: any) {
+      setKillStatus(`Error: ${err.message}`);
+    } finally {
+      setPendingKillPid(null);
+      clearTimeout(timeoutRef.current!);
+      timeoutRef.current = setTimeout(() => setKillStatus(''), 3000);
+    }
+  };
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -133,6 +168,7 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
           COMMAND{getSortIndicator('command')}
         </span>
       </div>
+      {killStatus && <div className="kill-status">{killStatus}</div>}
       <div className="table-body">
         {filteredAndSortedProcesses.map((process) => (
           <div
@@ -153,6 +189,17 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
             <span className="col-state">{process.stat.charAt(0)}</span>
             <span className="col-time">{process.time}</span>
             <span className="col-command">{process.command}</span>
+            <span className="col-actions">
+              {selectedPid === process.pid && (
+                <button
+                  className="kill-btn"
+                  onClick={(e) => { e.stopPropagation(); handleKillProcess(process.pid); }}
+                  disabled={pendingKillPid === process.pid}
+                >
+                  Kill
+                </button>
+              )}
+            </span>
           </div>
         ))}
       </div>

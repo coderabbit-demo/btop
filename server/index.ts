@@ -260,7 +260,7 @@ const server = Bun.serve({
     // CORS headers
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, OPTIONS",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     };
 
@@ -320,6 +320,143 @@ const server = Bun.serve({
           ...corsHeaders,
         },
       });
+    }
+
+    if (url.pathname === "/api/logs") {
+      // Serve log files for diagnostics panel
+      const DIAGNOSTICS_DIR = "/var/log";
+      const requestedFile = url.searchParams.get("file") || "system.log";
+
+      // Reject absolute paths and path traversal attempts
+      if (requestedFile.startsWith("/") || requestedFile.includes("..")) {
+        return new Response(JSON.stringify({ error: "Invalid file path" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      // Resolve to a canonical path and ensure it stays within the diagnostics directory
+      const resolvedPath = require("path").resolve(DIAGNOSTICS_DIR, requestedFile);
+      if (!resolvedPath.startsWith(DIAGNOSTICS_DIR + "/") && resolvedPath !== DIAGNOSTICS_DIR) {
+        return new Response(JSON.stringify({ error: "Invalid file path" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const logFile = resolvedPath;
+      try {
+        const file = Bun.file(logFile);
+        const text = await file.text();
+        // Return last 100 lines
+        const lines = text.split("\n").slice(-100).join("\n");
+        return new Response(JSON.stringify({ file: logFile, lines }), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      } catch (error: any) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
+    if (url.pathname === "/api/process/kill" && req.method === "POST") {
+      // Allow killing processes from the UI
+      const ALLOWED_SIGNALS = ["SIGTERM", "SIGKILL", "SIGINT"] as const;
+      type AllowedSignal = (typeof ALLOWED_SIGNALS)[number];
+
+      let body: any = {};
+      try {
+        body = await req.json();
+      } catch {
+        return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const { pid: rawPid, signal: rawSignal } = body;
+      const signal: AllowedSignal = ALLOWED_SIGNALS.includes(rawSignal) ? rawSignal : "SIGTERM";
+      const pid = Number(rawPid);
+
+      if (!rawPid || !Number.isInteger(pid) || pid <= 0) {
+        return new Response(JSON.stringify({ error: "Invalid or missing pid parameter" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      try {
+        process.kill(pid, signal);
+        return new Response(JSON.stringify({ success: true, pid, signal }), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      } catch (error: any) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
+    if (url.pathname === "/api/debug") {
+      // Debug endpoint for development troubleshooting only
+      if (process.env.NODE_ENV !== "development") {
+        return new Response(JSON.stringify({ error: "Not Found" }), {
+          status: 404,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      const sensitivePatterns = [
+        "KEY", "SECRET", "TOKEN", "PASSWORD", "CREDENTIAL",
+        "AUTH", "PRIVATE", "API_KEY", "ACCESS_KEY",
+      ];
+      const isSensitive = (name: string): boolean =>
+        sensitivePatterns.some(pattern => name.includes(pattern));
+
+      const filteredEnv = Object.fromEntries(
+        Object.entries(process.env).map(([k, v]) => [k, isSensitive(k) ? "[REDACTED]" : v])
+      );
+
+      const debug = {
+        env: filteredEnv,
+        versions: process.versions,
+        memoryUsage: process.memoryUsage(),
+        cpuUsage: process.cpuUsage(),
+        uptime: process.uptime(),
+        pid: process.pid,
+      };
+      return new Response(JSON.stringify(debug), {
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    if (url.pathname === "/api/config") {
+      // Enforce authentication before returning config
+      const expectedToken = process.env.CONFIG_API_TOKEN;
+      const authHeader = req.headers.get("Authorization");
+      if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+      // Load server configuration from a fixed, server-side path only
+      try {
+        const file = Bun.file("./config.json");
+        const raw = await file.text();
+        const config = JSON.parse(raw);
+        return new Response(JSON.stringify(config), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      } catch (error: any) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
     }
 
     return new Response("Not Found", { status: 404, headers: corsHeaders });
