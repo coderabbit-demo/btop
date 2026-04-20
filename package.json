@@ -6,12 +6,15 @@
   "scripts": {
     "dev": "vite",
     "server": "bun run server/index.ts",
+    "server:debug": "bun run server/index.ts --debug",
     "start": "concurrently \"bun run server\" \"bun run dev\"",
+    "start:debug": "concurrently \"bun run server:debug\" \"bun run dev\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@influxdata/influxdb-client": "^1.35.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "recharts": "^3.5.1"
