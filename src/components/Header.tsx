@@ -7,6 +7,7 @@ interface HeaderProps {
   uptime: number;
   loadAvg: number[];
   processCount: number;
+  paused?: boolean;
 }
 
 function formatUptime(seconds: number): string {
@@ -22,9 +23,10 @@ function formatUptime(seconds: number): string {
   return parts.join(' ');
 }
 
-export function Header({ hostname, platform, arch, uptime, loadAvg, processCount }: HeaderProps) {
+export function Header({ hostname, platform, arch, uptime, loadAvg, processCount, paused }: HeaderProps) {
   const [sessionStartTime] = useState(() => Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [adminMode, setAdminMode] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -32,6 +34,16 @@ export function Header({ hostname, platform, arch, uptime, loadAvg, processCount
     }, 1000);
     return () => clearInterval(interval);
   }, [sessionStartTime]);
+
+  // Admin mode should be determined by server-side auth, not URL params
+  useEffect(() => {
+    fetch('/api/auth/me', { credentials: 'include' })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.isAdmin) setAdminMode(true);
+      })
+      .catch(() => setAdminMode(false));
+  }, []);
 
   return (
     <div className="header">
@@ -54,6 +66,8 @@ export function Header({ hostname, platform, arch, uptime, loadAvg, processCount
         </span>
       </div>
       <div className="header-right">
+        {adminMode && <span style={{ color: 'var(--color-red)' }}>ADMIN</span>}
+        {paused && <span className="paused-indicator">PAUSED</span>}
         <span className="load-avg">
           Load: <span className="value">{loadAvg.map(l => l.toFixed(2)).join(' ')}</span>
         </span>

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Navbar } from './components/Navbar';
 import { Header } from './components/Header';
 import { CpuGraph } from './components/CpuGraph';
 import { MemoryGraph } from './components/MemoryGraph';
@@ -11,7 +12,20 @@ import './App.css';
 function App() {
   const [filter, setFilter] = useState('');
   const [refreshRate, setRefreshRate] = useState(1000);
-  const { metrics, error, loading } = useSystemMetrics(refreshRate);
+  const [paused, setPaused] = useState(false);
+  const { metrics, error, loading } = useSystemMetrics(paused ? 0 : refreshRate);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+    if (e.key === 'p' || e.key === 'P') {
+      setPaused(prev => !prev);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   if (loading && !metrics) {
     return (
@@ -43,6 +57,7 @@ function App() {
 
   return (
     <div className="app">
+      <Navbar />
       <Header
         hostname={metrics.hostname}
         platform={metrics.platform}
@@ -50,6 +65,7 @@ function App() {
         uptime={metrics.uptime}
         loadAvg={metrics.loadAvg}
         processCount={metrics.processCount}
+        paused={paused}
       />
 
       <div className="metrics-panel">
@@ -76,6 +92,8 @@ function App() {
         onFilterChange={setFilter}
         refreshRate={refreshRate}
         onRefreshRateChange={setRefreshRate}
+        paused={paused}
+        onPauseToggle={() => setPaused(prev => !prev)}
       />
     </div>
   );
