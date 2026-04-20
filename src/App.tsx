@@ -5,6 +5,7 @@ import { MemoryGraph } from './components/MemoryGraph';
 import { ProcessTable } from './components/ProcessTable';
 import { StatusBar } from './components/StatusBar';
 import { EnvironmentPanel } from './components/EnvironmentPanel';
+import { NetworkPanel } from './components/NetworkPanel';
 import { useSystemMetrics } from './hooks/useSystemMetrics';
 import './App.css';
 
@@ -60,6 +61,8 @@ function App() {
           percent={metrics.memPercent}
         />
       </div>
+
+      <NetworkPanel metrics={metrics} />
 
       <div className="process-section compact">
         <div className="section-header">
