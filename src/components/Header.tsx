@@ -34,7 +34,7 @@ export function Header({ hostname, platform, arch, uptime, loadAvg, processCount
   }, [sessionStartTime]);
 
   return (
-    <div className="header">
+    <header className="header" role="banner">
       <div className="header-left">
         <span className="logo">
           <span className="logo-b">b</span>
@@ -55,12 +55,12 @@ export function Header({ hostname, platform, arch, uptime, loadAvg, processCount
       </div>
       <div className="header-right">
         <span className="load-avg">
-          Load: <span className="value">{loadAvg.map(l => l.toFixed(2)).join(' ')}</span>
+          Load: <span className="value" aria-label={`Load average ${loadAvg.map(l => l.toFixed(2)).join(', ')}`}>{loadAvg.map(l => l.toFixed(2)).join(' ')}</span>
         </span>
         <span className="proc-count">
           Tasks: <span className="value">{processCount}</span>
         </span>
       </div>
-    </div>
+    </header>
   );
 }
