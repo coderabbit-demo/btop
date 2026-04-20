@@ -4,6 +4,7 @@ import {
   Area,
   XAxis,
   YAxis,
+  CartesianGrid,
   ResponsiveContainer,
   Tooltip,
 } from 'recharts';
@@ -67,14 +68,15 @@ export function MemoryGraph({ used, total, percent }: MemoryGraphProps) {
         </span>
       </div>
       <div className="graph-container">
-        <ResponsiveContainer width="100%" height={120}>
+        <ResponsiveContainer width="100%" height={160}>
           <AreaChart data={history} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
             <defs>
               <linearGradient id="memGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={color} stopOpacity={0.7} />
-                <stop offset="100%" stopColor={color} stopOpacity={0.1} />
+                <stop offset="0%" stopColor={color} stopOpacity={0.9} />
+                <stop offset="100%" stopColor={color} stopOpacity={0.05} />
               </linearGradient>
             </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
             <XAxis dataKey="time" hide />
             <YAxis domain={[0, 100]} hide />
             <Tooltip
@@ -88,11 +90,11 @@ export function MemoryGraph({ used, total, percent }: MemoryGraphProps) {
               formatter={(value: number) => [`${value.toFixed(1)}%`, 'Usage']}
             />
             <Area
-              type="linear"
+              type="monotone"
               dataKey="percent"
               stroke={color}
               fill="url(#memGradient)"
-              strokeWidth={2}
+              strokeWidth={2.5}
               dot={false}
               isAnimationActive={false}
             />

@@ -249,9 +249,21 @@ body {
 }
 
 .graph-value {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
-  text-shadow: 0 0 20px currentColor;
+  text-shadow: 0 0 20px currentColor, 0 0 40px currentColor;
+  animation: value-glow 2s ease-in-out infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .graph-value {
+    animation: none;
+  }
+}
+
+@keyframes value-glow {
+  from { text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; }
+  to { text-shadow: 0 0 10px currentColor, 0 0 25px currentColor; }
 }
 
 .graph-container {
@@ -259,6 +271,8 @@ body {
   border-radius: 8px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 15px rgba(96, 165, 250, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 /* CPU Cores Grid */
