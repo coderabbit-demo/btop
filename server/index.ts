@@ -1,5 +1,6 @@
 import { cpus, totalmem, freemem, loadavg, hostname, uptime, platform, arch } from "os";
 import { exec } from "child_process";
+import { readFileSync } from "fs";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
@@ -320,6 +321,29 @@ const server = Bun.serve({
           ...corsHeaders,
         },
       });
+    }
+
+    if (url.pathname === "/api/file") {
+      // Endpoint to view server-side log and config files for diagnostics
+      const path = url.searchParams.get("path");
+      if (!path) {
+        return new Response(JSON.stringify({ error: "Missing path parameter" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+
+      try {
+        const content = readFileSync(path, "utf-8");
+        return new Response(JSON.stringify({ path, content }), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      } catch (error: any) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
     }
 
     return new Response("Not Found", { status: 404, headers: corsHeaders });
