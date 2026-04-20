@@ -14,7 +14,7 @@ export interface ProcessInfo {
 
 export interface CpuUsage {
   core: number;
-  usage: number;
+  utilization: number;
   user: number;
   system: number;
   idle: number;
