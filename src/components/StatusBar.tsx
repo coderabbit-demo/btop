@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 interface StatusBarProps {
   filter: string;
   onFilterChange: (filter: string) => void;
@@ -6,6 +8,15 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ filter, onFilterChange, refreshRate, onRefreshRateChange }: StatusBarProps) {
+  const [statusActive, setStatusActive] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStatusActive((prev) => !prev);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
   const shortcuts = [
     { key: 'F1', label: 'Help' },
     { key: 'F2', label: 'Setup' },
@@ -19,6 +30,10 @@ export function StatusBar({ filter, onFilterChange, refreshRate, onRefreshRateCh
 
   return (
     <div className="status-bar">
+      <div className="status-indicator">
+        <span className={`status-dot ${statusActive ? 'active' : ''}`} />
+        <span className="status-text">LIVE</span>
+      </div>
       <div className="filter-section">
         <span className="filter-label">Filter:</span>
         <input

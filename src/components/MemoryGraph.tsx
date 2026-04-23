@@ -63,7 +63,7 @@ export function MemoryGraph({ used, total, percent }: MemoryGraphProps) {
       <div className="graph-header">
         <span className="graph-title">Memory</span>
         <span className="graph-value" style={{ color }}>
-          {percent}%
+          {formatBytes(used)} / {formatBytes(total)} ({percent}%)
         </span>
       </div>
       <div className="graph-container">
@@ -113,7 +113,7 @@ export function MemoryGraph({ used, total, percent }: MemoryGraphProps) {
         <div className="memory-stats">
           <span className="memory-stat">
             <span className="stat-label">Used</span>
-            <span className="stat-value" style={{ color }}>{formatBytes(used)}</span>
+            <span className="stat-value" style={{ color }}>{formatBytes(used)} ({percent}%)</span>
           </span>
           <span className="memory-stat">
             <span className="stat-label">Total</span>
@@ -121,7 +121,7 @@ export function MemoryGraph({ used, total, percent }: MemoryGraphProps) {
           </span>
           <span className="memory-stat">
             <span className="stat-label">Free</span>
-            <span className="stat-value" style={{ color: '#34d399' }}>{formatBytes(total - used)}</span>
+            <span className="stat-value" style={{ color: '#34d399' }}>{formatBytes(total - used)} ({total > 0 ? Math.round(((total - used) / total) * 100) : 0}%)</span>
           </span>
         </div>
       </div>
