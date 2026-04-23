@@ -15,14 +15,14 @@ function formatBytes(bytes: number): string {
 
 export function MemoryBar({ label, used, total, percent }: MemoryBarProps) {
   const getBarColor = (usage: number): string => {
-    if (usage < 50) return 'var(--color-green)';
-    if (usage < 75) return 'var(--color-yellow)';
-    if (usage < 90) return 'var(--color-orange)';
+    if (usage <= 50) return 'var(--color-green)';
+    if (usage <= 75) return 'var(--color-yellow)';
+    if (usage <= 90) return 'var(--color-orange)';
     return 'var(--color-red)';
   };
 
   const renderBar = (usage: number, maxBlocks: number = 30): string => {
-    const filled = Math.round((usage / 100) * maxBlocks);
+    const filled = Math.ceil((usage / 100) * maxBlocks);
     const blocks = '|'.repeat(filled);
     const empty = ' '.repeat(maxBlocks - filled);
     return blocks + empty;
