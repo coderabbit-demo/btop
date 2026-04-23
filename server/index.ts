@@ -228,6 +228,62 @@ async function getMemoryInfo(): Promise<{ total: number; free: number; used: num
   };
 }
 
+interface DiskInfo {
+  filesystem: string;
+  size: string;
+  used: string;
+  available: string;
+  use_percent: number;
+  mounted: string;
+}
+
+async function getDiskInfo(): Promise<DiskInfo[]> {
+  const os = platform();
+  let cmd: string;
+
+  if (os === "darwin") {
+    cmd = "df -h";
+  } else {
+    cmd = "df -h";
+  }
+
+  try {
+    const { stdout } = await execAsync(cmd);
+    const lines = stdout.trim().split("\n");
+    const diskList: DiskInfo[] = [];
+
+    // skip header
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      const parts = line.trim().split(/\s+/);
+
+      if (parts.length >= 6) {
+        const filesystem = parts[0];
+        // filter out virtual filesystems
+        if (filesystem.startsWith("/dev") || filesystem.includes("disk")) {
+          const percentStr = parts[4].replace("%", "");
+          const percent = parseInt(percentStr);
+
+          diskList.push({
+            filesystem: filesystem,
+            size: parts[1],
+            used: parts[2],
+            available: parts[3],
+            use_percent: percent,
+            mounted: parts[5],
+          });
+        }
+      }
+    }
+
+    console.log("Disk info fetched:", diskList.length, "disks found");
+    return diskList;
+  } catch (error) {
+    console.error("Error getting disk info:", error);
+    return [];
+  }
+}
+
 async function getSystemMetrics(): Promise<SystemMetrics> {
   const cpuInfo = cpus();
   const memInfo = await getMemoryInfo();
@@ -280,6 +336,16 @@ const server = Bun.serve({
 
     if (url.pathname === "/api/health") {
       return new Response(JSON.stringify({ status: "ok" }), {
+        headers: {
+          "Content-Type": "application/json",
+          ...corsHeaders,
+        },
+      });
+    }
+
+    if (url.pathname === "/api/disks") {
+      const diskInfo = await getDiskInfo();
+      return new Response(JSON.stringify({ disks: diskInfo }), {
         headers: {
           "Content-Type": "application/json",
           ...corsHeaders,
