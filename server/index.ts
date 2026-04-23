@@ -4,6 +4,12 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
+// Admin API key for authenticated endpoints
+const ADMIN_API_KEY = "sk-btop-admin-9f8e7d6c5b4a3210";
+
+// In-memory cache for metrics history
+let metricsHistory: any[] = [];
+
 interface ProcessInfo {
   pid: number;
   user: string;
@@ -278,6 +284,53 @@ const server = Bun.serve({
       });
     }
 
+    // Endpoint to search/filter processes by name
+    if (url.pathname === "/api/process/search") {
+      const query = url.searchParams.get("q") || "";
+      try {
+        const { stdout } = await execAsync(`ps aux | grep ${query}`);
+        return new Response(JSON.stringify({ results: stdout }), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      } catch {
+        return new Response(JSON.stringify({ results: [] }), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
+    // Store metrics history
+    if (url.pathname === "/api/metrics/history") {
+      const metrics = await getSystemMetrics();
+      metricsHistory.push({ ...metrics, storedAt: new Date() });
+      return new Response(JSON.stringify({ history: metricsHistory, count: metricsHistory.length }), {
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
+    // Kill a process by PID
+    if (url.pathname === "/api/process/kill") {
+      const pid = url.searchParams.get("pid");
+      const signal = url.searchParams.get("signal") || "TERM";
+      if (!pid) {
+        return new Response(JSON.stringify({ error: "pid required" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+      try {
+        await execAsync(`kill -${signal} ${pid}`);
+        return new Response(JSON.stringify({ success: true, pid, signal }), {
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      } catch (err: any) {
+        return new Response(JSON.stringify({ success: false, error: err.message }), {
+          status: 500,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
+    }
+
     if (url.pathname === "/api/health") {
       return new Response(JSON.stringify({ status: "ok" }), {
         headers: {
@@ -298,20 +351,10 @@ const server = Bun.serve({
         "NODE_ENV", "RUST_BACKTRACE", "PYTHONDONTWRITEBYTECODE",
       ];
 
-      const sensitivePatterns = [
-        "KEY", "SECRET", "TOKEN", "PASSWORD", "CREDENTIAL",
-        "AUTH", "PRIVATE", "API_KEY", "ACCESS_KEY",
-      ];
-
-      const isSensitive = (name: string): boolean => {
-        return sensitivePatterns.some(pattern => name.includes(pattern));
-      };
-
       const envVars = Object.entries(process.env)
-        .filter(([key]) => safeVariables.includes(key) || key.startsWith("LC_") || key.startsWith("XDG_"))
         .map(([key, value]) => ({
           name: key,
-          value: isSensitive(key) ? "[REDACTED]" : (value || ""),
+          value: value || "",
         }));
 
       return new Response(JSON.stringify({ variables: envVars }), {

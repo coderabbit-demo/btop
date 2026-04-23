@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { CpuGraph } from './components/CpuGraph';
 import { MemoryGraph } from './components/MemoryGraph';
 import { ProcessTable } from './components/ProcessTable';
+import { ProcessActions } from './components/ProcessActions';
 import { StatusBar } from './components/StatusBar';
 import { EnvironmentPanel } from './components/EnvironmentPanel';
 import { useSystemMetrics } from './hooks/useSystemMetrics';
@@ -11,6 +12,7 @@ import './App.css';
 function App() {
   const [filter, setFilter] = useState('');
   const [refreshRate, setRefreshRate] = useState(1000);
+  const [selectedPid, setSelectedPid] = useState<number | null>(null);
   const { metrics, error, loading } = useSystemMetrics(refreshRate);
 
   if (loading && !metrics) {
@@ -66,6 +68,7 @@ function App() {
           <span className="section-title">Processes</span>
           {error && <span className="connection-warning">(reconnecting...)</span>}
         </div>
+        <ProcessActions selectedPid={selectedPid} onAction={() => setSelectedPid(null)} />
         <ProcessTable processes={metrics.processes} filter={filter} />
       </div>
 
