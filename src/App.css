@@ -335,7 +335,7 @@ body {
 .battery-section-value {
   font-size: 13px;
   font-weight: 700;
-  text-shadow: 0 0 12px currentColor;
+  text-shadow: 0 0 12px currentcolor;
 }
 
 .battery-condition {
