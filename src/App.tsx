@@ -5,6 +5,7 @@ import { MemoryGraph } from './components/MemoryGraph';
 import { ProcessTable } from './components/ProcessTable';
 import { StatusBar } from './components/StatusBar';
 import { EnvironmentPanel } from './components/EnvironmentPanel';
+import { BatteryHealth } from './components/BatteryHealth';
 import { useSystemMetrics } from './hooks/useSystemMetrics';
 import './App.css';
 
@@ -59,6 +60,7 @@ function App() {
           total={metrics.totalMem}
           percent={metrics.memPercent}
         />
+        <BatteryHealth battery={metrics.battery} />
       </div>
 
       <div className="process-section compact">

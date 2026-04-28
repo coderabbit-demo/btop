@@ -26,6 +26,20 @@ interface CpuUsage {
   idle: number;
 }
 
+interface BatteryInfo {
+  hasBattery: boolean;
+  charging: boolean;
+  acPowered: boolean;
+  percent: number;
+  timeRemainingMin: number | null;
+  cycleCount: number | null;
+  designCapacity: number | null;
+  maxCapacity: number | null;
+  healthPercent: number | null;
+  condition: string | null;
+  temperatureC: number | null;
+}
+
 interface SystemMetrics {
   hostname: string;
   platform: string;
@@ -41,6 +55,7 @@ interface SystemMetrics {
   memPercent: number;
   processes: ProcessInfo[];
   processCount: number;
+  battery: BatteryInfo;
   timestamp: number;
 }
 
@@ -228,10 +243,150 @@ async function getMemoryInfo(): Promise<{ total: number; free: number; used: num
   };
 }
 
+function emptyBattery(): BatteryInfo {
+  return {
+    hasBattery: false,
+    charging: false,
+    acPowered: false,
+    percent: 0,
+    timeRemainingMin: null,
+    cycleCount: null,
+    designCapacity: null,
+    maxCapacity: null,
+    healthPercent: null,
+    condition: null,
+    temperatureC: null,
+  };
+}
+
+async function getBatteryInfo(): Promise<BatteryInfo> {
+  const os = platform();
+
+  if (os === "darwin") {
+    try {
+      const [pmsetOut, ioregOut] = await Promise.all([
+        execAsync("pmset -g batt").then((r) => r.stdout).catch(() => ""),
+        execAsync("ioreg -rn AppleSmartBattery").then((r) => r.stdout).catch(() => ""),
+      ]);
+
+      if (!pmsetOut && !ioregOut) return emptyBattery();
+
+      // pmset output example:
+      // Now drawing from 'Battery Power'
+      //  -InternalBattery-0 (id=...)	87%; discharging; 5:12 remaining present: true
+      const acPowered = /AC Power/i.test(pmsetOut);
+      const chargingMatch = /\b(charging|charged|finishing charge)\b/i.exec(pmsetOut);
+      const percentMatch = /(\d+)%/.exec(pmsetOut);
+      const timeMatch = /(\d+):(\d{2})\s+remaining/i.exec(pmsetOut);
+
+      const ioregNum = (key: string): number | null => {
+        const m = new RegExp(`"${key}"\\s*=\\s*(\\d+)`).exec(ioregOut);
+        return m ? parseInt(m[1], 10) : null;
+      };
+      const ioregStr = (key: string): string | null => {
+        const m = new RegExp(`"${key}"\\s*=\\s*"([^"]+)"`).exec(ioregOut);
+        return m ? m[1] : null;
+      };
+
+      const designCapacity = ioregNum("DesignCapacity");
+      const maxCapacity = ioregNum("AppleRawMaxCapacity") ?? ioregNum("MaxCapacity");
+      const cycleCount = ioregNum("CycleCount");
+      const condition = ioregStr("BatteryHealth") ?? ioregStr("PermanentFailureStatus");
+      const tempRaw = ioregNum("Temperature"); // hundredths of a degree C
+
+      const healthPercent =
+        designCapacity && maxCapacity && designCapacity > 0
+          ? Math.min(100, Math.round((maxCapacity / designCapacity) * 100))
+          : null;
+
+      const hasBattery = percentMatch !== null || maxCapacity !== null;
+      if (!hasBattery) return emptyBattery();
+
+      return {
+        hasBattery: true,
+        charging: chargingMatch ? /charging|finishing charge/i.test(chargingMatch[0]) : false,
+        acPowered,
+        percent: percentMatch ? parseInt(percentMatch[1], 10) : 0,
+        timeRemainingMin: timeMatch ? parseInt(timeMatch[1], 10) * 60 + parseInt(timeMatch[2], 10) : null,
+        cycleCount,
+        designCapacity,
+        maxCapacity,
+        healthPercent,
+        condition,
+        temperatureC: tempRaw !== null ? Math.round(tempRaw / 10) / 10 : null,
+      };
+    } catch {
+      return emptyBattery();
+    }
+  }
+
+  if (os === "linux") {
+    try {
+      const { stdout: ls } = await execAsync("ls /sys/class/power_supply 2>/dev/null").catch(() => ({ stdout: "" }));
+      const entries = ls.split("\n").map((s) => s.trim()).filter(Boolean);
+      const batName = entries.find((e) => /^BAT/i.test(e));
+      if (!batName) return emptyBattery();
+
+      const base = `/sys/class/power_supply/${batName}`;
+      const read = async (file: string): Promise<string | null> => {
+        try {
+          const { stdout } = await execAsync(`cat ${base}/${file}`);
+          return stdout.trim();
+        } catch {
+          return null;
+        }
+      };
+
+      const [status, capacity, energyFull, energyFullDesign, chargeFull, chargeFullDesign, cycles, timeToEmpty, temp, acOnline] =
+        await Promise.all([
+          read("status"),
+          read("capacity"),
+          read("energy_full"),
+          read("energy_full_design"),
+          read("charge_full"),
+          read("charge_full_design"),
+          read("cycle_count"),
+          read("time_to_empty_now"),
+          read("temp"),
+          execAsync("cat /sys/class/power_supply/A*/online 2>/dev/null").then((r) => r.stdout.trim()).catch(() => null),
+        ]);
+
+      const full = energyFull ?? chargeFull;
+      const fullDesign = energyFullDesign ?? chargeFullDesign;
+      const fullN = full ? parseInt(full, 10) : null;
+      const fullDesignN = fullDesign ? parseInt(fullDesign, 10) : null;
+
+      const healthPercent =
+        fullN && fullDesignN && fullDesignN > 0
+          ? Math.min(100, Math.round((fullN / fullDesignN) * 100))
+          : null;
+
+      return {
+        hasBattery: true,
+        charging: status === "Charging",
+        acPowered: acOnline === "1" || status === "Charging" || status === "Full",
+        percent: capacity ? parseInt(capacity, 10) : 0,
+        timeRemainingMin: timeToEmpty ? Math.round(parseInt(timeToEmpty, 10) / 60) : null,
+        cycleCount: cycles ? parseInt(cycles, 10) : null,
+        designCapacity: fullDesignN,
+        maxCapacity: fullN,
+        healthPercent,
+        condition: null,
+        temperatureC: temp ? parseInt(temp, 10) / 10 : null,
+      };
+    } catch {
+      return emptyBattery();
+    }
+  }
+
+  return emptyBattery();
+}
+
 async function getSystemMetrics(): Promise<SystemMetrics> {
   const cpuInfo = cpus();
   const memInfo = await getMemoryInfo();
   const processes = await getProcesses();
+  const battery = await getBatteryInfo();
 
   return {
     hostname: hostname(),
@@ -248,6 +403,7 @@ async function getSystemMetrics(): Promise<SystemMetrics> {
     memPercent: memInfo.percent,
     processes,
     processCount: processes.length,
+    battery,
     timestamp: Date.now(),
   };
 }

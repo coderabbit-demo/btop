@@ -211,14 +211,24 @@ body {
 /* Metrics Panel */
 .metrics-panel {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   flex-shrink: 0;
 }
 
+@media (max-width: 1100px) {
+  .metrics-panel {
+    grid-template-columns: 1fr 1fr;
+  }
+  .battery-health {
+    grid-column: span 2;
+  }
+}
+
 /* Graph Cards */
 .cpu-graph,
-.memory-graph {
+.memory-graph,
+.battery-health {
   background: var(--bg-card);
   border: 1px solid var(--border-color);
   border-radius: 12px;
@@ -228,9 +238,154 @@ body {
 }
 
 .cpu-graph:hover,
-.memory-graph:hover {
+.memory-graph:hover,
+.battery-health:hover {
   border-color: var(--border-glow);
   box-shadow: 0 4px 30px rgba(96, 165, 250, 0.15);
+}
+
+/* Battery Health */
+.battery-health {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.battery-empty-hint {
+  color: var(--color-text-dim);
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.battery-charge-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.battery-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.battery-icon-shell {
+  width: 56px;
+  height: 24px;
+  border: 2px solid var(--border-color);
+  border-radius: 4px;
+  padding: 2px;
+  background: rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  position: relative;
+}
+
+.battery-icon-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease, background 0.3s;
+}
+
+.battery-icon-cap {
+  width: 4px;
+  height: 12px;
+  background: var(--border-color);
+  border-radius: 0 2px 2px 0;
+  margin-left: 1px;
+}
+
+.battery-status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.battery-status-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.battery-status-time {
+  font-size: 10px;
+  color: var(--color-text-dim);
+}
+
+.battery-health-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.battery-health-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.battery-section-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--color-text-dim);
+}
+
+.battery-section-value {
+  font-size: 13px;
+  font-weight: 700;
+  text-shadow: 0 0 12px currentColor;
+}
+
+.battery-condition {
+  font-size: 10px;
+  color: var(--color-text-dim);
+  font-weight: 500;
+  text-shadow: none;
+}
+
+.battery-bar-container {
+  height: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.battery-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.battery-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.battery-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.battery-stat .stat-label {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-text-dim);
+}
+
+.battery-stat .stat-value {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .graph-header {
