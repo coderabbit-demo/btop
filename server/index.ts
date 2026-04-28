@@ -297,7 +297,7 @@ async function getBatteryInfo(): Promise<BatteryInfo> {
       const tempRaw = ioregNum("Temperature"); // hundredths of a degree C
 
       const healthPercent =
-        designCapacity && maxCapacity && designCapacity > 0
+        designCapacity != null && maxCapacity != null && designCapacity > 0
           ? Math.min(100, Math.round((maxCapacity / designCapacity) * 100))
           : null;
 
@@ -362,7 +362,7 @@ async function getBatteryInfo(): Promise<BatteryInfo> {
       const fullDesignRaw = fullDesign ? parseInt(fullDesign, 10) : null;
 
       const healthPercent =
-        fullRaw && fullDesignRaw && fullDesignRaw > 0
+        fullRaw != null && fullDesignRaw != null && fullDesignRaw > 0
           ? Math.min(100, Math.round((fullRaw / fullDesignRaw) * 100))
           : null;
 
