@@ -29,6 +29,7 @@ export interface BatteryInfo {
   cycleCount: number | null;
   designCapacity: number | null;
   maxCapacity: number | null;
+  capacityUnit: 'mAh' | 'Wh' | null;
   healthPercent: number | null;
   condition: string | null;
   temperatureC: number | null;

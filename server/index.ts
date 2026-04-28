@@ -35,6 +35,7 @@ interface BatteryInfo {
   cycleCount: number | null;
   designCapacity: number | null;
   maxCapacity: number | null;
+  capacityUnit: 'mAh' | 'Wh' | null;
   healthPercent: number | null;
   condition: string | null;
   temperatureC: number | null;
@@ -253,6 +254,7 @@ function emptyBattery(): BatteryInfo {
     cycleCount: null,
     designCapacity: null,
     maxCapacity: null,
+    capacityUnit: null,
     healthPercent: null,
     condition: null,
     temperatureC: null,
@@ -311,6 +313,7 @@ async function getBatteryInfo(): Promise<BatteryInfo> {
         cycleCount,
         designCapacity,
         maxCapacity,
+        capacityUnit: 'mAh',
         healthPercent,
         condition,
         temperatureC: tempRaw !== null ? Math.round(tempRaw / 10) / 10 : null,
@@ -352,15 +355,21 @@ async function getBatteryInfo(): Promise<BatteryInfo> {
           execAsync("cat /sys/class/power_supply/A*/online 2>/dev/null").then((r) => r.stdout.trim()).catch(() => null),
         ]);
 
+      const usedEnergy = energyFull !== null;
       const full = energyFull ?? chargeFull;
       const fullDesign = energyFullDesign ?? chargeFullDesign;
-      const fullN = full ? parseInt(full, 10) : null;
-      const fullDesignN = fullDesign ? parseInt(fullDesign, 10) : null;
+      const fullRaw = full ? parseInt(full, 10) : null;
+      const fullDesignRaw = fullDesign ? parseInt(fullDesign, 10) : null;
 
       const healthPercent =
-        fullN && fullDesignN && fullDesignN > 0
-          ? Math.min(100, Math.round((fullN / fullDesignN) * 100))
+        fullRaw && fullDesignRaw && fullDesignRaw > 0
+          ? Math.min(100, Math.round((fullRaw / fullDesignRaw) * 100))
           : null;
+
+      // energy_* files are in µWh → convert to Wh; charge_* files are in µAh → convert to mAh
+      const divisor = usedEnergy ? 1_000_000 : 1_000;
+      const fullN = fullRaw !== null ? Math.round(fullRaw / divisor) : null;
+      const fullDesignN = fullDesignRaw !== null ? Math.round(fullDesignRaw / divisor) : null;
 
       return {
         hasBattery: true,
@@ -374,6 +383,7 @@ async function getBatteryInfo(): Promise<BatteryInfo> {
         cycleCount: cycles ? parseInt(cycles, 10) : null,
         designCapacity: fullDesignN,
         maxCapacity: fullN,
+        capacityUnit: fullRaw !== null ? (usedEnergy ? 'Wh' : 'mAh') : null,
         healthPercent,
         condition: null,
         temperatureC: temp ? parseInt(temp, 10) / 10 : null,

@@ -122,7 +122,7 @@ export function BatteryHealth({ battery }: BatteryHealthProps) {
           <span className="stat-label">Capacity</span>
           <span className="stat-value">
             {battery.maxCapacity !== null && battery.designCapacity !== null
-              ? `${battery.maxCapacity.toLocaleString()} / ${battery.designCapacity.toLocaleString()} mAh`
+              ? `${battery.maxCapacity.toLocaleString()} / ${battery.designCapacity.toLocaleString()} ${battery.capacityUnit ?? 'mAh'}`
               : '—'}
           </span>
         </div>
