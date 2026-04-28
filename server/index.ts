@@ -352,7 +352,7 @@ async function getBatteryInfo(): Promise<BatteryInfo> {
           read("time_to_empty_now"),
           read("time_to_full_now"),
           read("temp"),
-          execAsync("cat /sys/class/power_supply/A*/online 2>/dev/null").then((r) => r.stdout.trim()).catch(() => null),
+          execAsync("cat /sys/class/power_supply/A*/online 2>/dev/null").then((r) => r.stdout.split('\n').map((l) => l.trim())).catch(() => null),
         ]);
 
       const usedEnergy = energyFull !== null;
@@ -374,7 +374,7 @@ async function getBatteryInfo(): Promise<BatteryInfo> {
       return {
         hasBattery: true,
         charging: status === "Charging",
-        acPowered: acOnline === "1" || status === "Charging" || status === "Full",
+        acPowered: (acOnline?.some((l) => l === "1") ?? false) || status === "Charging" || status === "Full",
         percent: capacity ? parseInt(capacity, 10) : 0,
         timeRemainingMin: (() => {
           const raw = status === "Charging" ? (timeToFull ?? timeToEmpty) : timeToEmpty;
