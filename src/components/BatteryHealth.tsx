@@ -45,8 +45,8 @@ export function BatteryHealth({ battery }: BatteryHealthProps) {
   }
 
   const chargeColor = getChargeColor(battery.percent, battery.charging);
-  const healthPct = battery.healthPercent ?? 100;
-  const healthColor = getHealthColor(healthPct);
+  const isHealthKnown = battery.healthPercent != null;
+  const healthColor = isHealthKnown ? getHealthColor(battery.healthPercent!) : '#64748b';
 
   const status = battery.charging
     ? 'Charging'
@@ -98,14 +98,16 @@ export function BatteryHealth({ battery }: BatteryHealthProps) {
           </span>
         </div>
         <div className="battery-bar-container">
-          <div
-            className="battery-bar-fill"
-            style={{
-              width: `${healthPct}%`,
-              background: `linear-gradient(90deg, ${healthColor} 0%, ${healthColor}88 100%)`,
-              boxShadow: `0 0 16px ${healthColor}55`,
-            }}
-          />
+          {isHealthKnown && (
+            <div
+              className="battery-bar-fill"
+              style={{
+                width: `${battery.healthPercent}%`,
+                background: `linear-gradient(90deg, ${healthColor} 0%, ${healthColor}88 100%)`,
+                boxShadow: `0 0 16px ${healthColor}55`,
+              }}
+            />
+          )}
         </div>
       </div>
 
