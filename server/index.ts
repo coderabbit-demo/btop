@@ -337,7 +337,7 @@ async function getBatteryInfo(): Promise<BatteryInfo> {
         }
       };
 
-      const [status, capacity, energyFull, energyFullDesign, chargeFull, chargeFullDesign, cycles, timeToEmpty, temp, acOnline] =
+      const [status, capacity, energyFull, energyFullDesign, chargeFull, chargeFullDesign, cycles, timeToEmpty, timeToFull, temp, acOnline] =
         await Promise.all([
           read("status"),
           read("capacity"),
@@ -347,6 +347,7 @@ async function getBatteryInfo(): Promise<BatteryInfo> {
           read("charge_full_design"),
           read("cycle_count"),
           read("time_to_empty_now"),
+          read("time_to_full_now"),
           read("temp"),
           execAsync("cat /sys/class/power_supply/A*/online 2>/dev/null").then((r) => r.stdout.trim()).catch(() => null),
         ]);
@@ -366,7 +367,10 @@ async function getBatteryInfo(): Promise<BatteryInfo> {
         charging: status === "Charging",
         acPowered: acOnline === "1" || status === "Charging" || status === "Full",
         percent: capacity ? parseInt(capacity, 10) : 0,
-        timeRemainingMin: timeToEmpty ? Math.round(parseInt(timeToEmpty, 10) / 60) : null,
+        timeRemainingMin: (() => {
+          const raw = status === "Charging" ? (timeToFull ?? timeToEmpty) : timeToEmpty;
+          return raw ? Math.round(parseInt(raw, 10) / 60) : null;
+        })(),
         cycleCount: cycles ? parseInt(cycles, 10) : null,
         designCapacity: fullDesignN,
         maxCapacity: fullN,
