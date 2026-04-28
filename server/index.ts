@@ -327,66 +327,93 @@ async function getBatteryInfo(): Promise<BatteryInfo> {
     try {
       const { stdout: ls } = await execAsync("ls /sys/class/power_supply 2>/dev/null").catch(() => ({ stdout: "" }));
       const entries = ls.split("\n").map((s) => s.trim()).filter(Boolean);
-      const batName = entries.find((e) => /^BAT/i.test(e));
-      if (!batName) return emptyBattery();
+      const batEntries = entries.filter((e) => /^BAT/i.test(e));
+      if (batEntries.length === 0) return emptyBattery();
 
-      const base = `/sys/class/power_supply/${batName}`;
-      const read = async (file: string): Promise<string | null> => {
-        try {
-          const { stdout } = await execAsync(`cat ${base}/${file}`);
-          return stdout.trim();
-        } catch {
-          return null;
-        }
+      const readBat = async (name: string) => {
+        const base = `/sys/class/power_supply/${name}`;
+        const rd = async (file: string): Promise<string | null> => {
+          try {
+            const { stdout } = await execAsync(`cat ${base}/${file}`);
+            return stdout.trim();
+          } catch {
+            return null;
+          }
+        };
+        const [status, capacity, energyNow, energyFull, energyFullDesign, chargeNow, chargeFull, chargeFullDesign, cycles, timeToEmpty, timeToFull, temp] =
+          await Promise.all([
+            rd("status"),
+            rd("capacity"),
+            rd("energy_now"),
+            rd("energy_full"),
+            rd("energy_full_design"),
+            rd("charge_now"),
+            rd("charge_full"),
+            rd("charge_full_design"),
+            rd("cycle_count"),
+            rd("time_to_empty_now"),
+            rd("time_to_full_now"),
+            rd("temp"),
+          ]);
+        const usedEnergy = energyFull !== null;
+        const now = energyNow ?? chargeNow;
+        const full = energyFull ?? chargeFull;
+        const fullDesign = energyFullDesign ?? chargeFullDesign;
+        return { status, capacity, now, full, fullDesign, cycles, timeToEmpty, timeToFull, temp, usedEnergy };
       };
 
-      const [status, capacity, energyFull, energyFullDesign, chargeFull, chargeFullDesign, cycles, timeToEmpty, timeToFull, temp, acOnline] =
-        await Promise.all([
-          read("status"),
-          read("capacity"),
-          read("energy_full"),
-          read("energy_full_design"),
-          read("charge_full"),
-          read("charge_full_design"),
-          read("cycle_count"),
-          read("time_to_empty_now"),
-          read("time_to_full_now"),
-          read("temp"),
-          execAsync("cat /sys/class/power_supply/A*/online 2>/dev/null").then((r) => r.stdout.split('\n').map((l) => l.trim())).catch(() => null),
-        ]);
+      const [batData, acOnline] = await Promise.all([
+        Promise.all(batEntries.map(readBat)),
+        execAsync("cat /sys/class/power_supply/A*/online 2>/dev/null").then((r) => r.stdout.split('\n').map((l) => l.trim())).catch(() => null),
+      ]);
 
-      const usedEnergy = energyFull !== null;
-      const full = energyFull ?? chargeFull;
-      const fullDesign = energyFullDesign ?? chargeFullDesign;
-      const fullRaw = full ? parseInt(full, 10) : null;
-      const fullDesignRaw = fullDesign ? parseInt(fullDesign, 10) : null;
-
-      const healthPercent =
-        fullRaw != null && fullDesignRaw != null && fullDesignRaw > 0
-          ? Math.min(100, Math.round((fullRaw / fullDesignRaw) * 100))
-          : null;
-
+      const usedEnergy = batData.some((b) => b.usedEnergy);
       // energy_* files are in µWh → convert to Wh; charge_* files are in µAh → convert to mAh
       const divisor = usedEnergy ? 1_000_000 : 1_000;
-      const fullN = fullRaw !== null ? Math.round(fullRaw / divisor) : null;
-      const fullDesignN = fullDesignRaw !== null ? Math.round(fullDesignRaw / divisor) : null;
+
+      const totalFullRaw = batData.reduce((sum, b) => b.full ? sum + parseInt(b.full, 10) : sum, 0) || null;
+      const totalFullDesignRaw = batData.reduce((sum, b) => b.fullDesign ? sum + parseInt(b.fullDesign, 10) : sum, 0) || null;
+      const totalNowRaw = batData.reduce((sum, b) => b.now ? sum + parseInt(b.now, 10) : sum, 0);
+      const hasNowData = batData.some((b) => b.now !== null);
+
+      const overallPercent = hasNowData && totalFullRaw !== null
+        ? Math.min(100, Math.round((totalNowRaw / totalFullRaw) * 100))
+        : (() => {
+            const caps = batData.map((b) => b.capacity ? parseInt(b.capacity, 10) : null).filter((c): c is number => c !== null);
+            return caps.length > 0 ? Math.round(caps.reduce((a, b) => a + b, 0) / caps.length) : 0;
+          })();
+
+      const healthPercent =
+        totalFullRaw !== null && totalFullDesignRaw !== null
+          ? Math.min(100, Math.round((totalFullRaw / totalFullDesignRaw) * 100))
+          : null;
+
+      const anyCharging = batData.some((b) => b.status === "Charging");
+      const anyFull = batData.some((b) => b.status === "Full");
+
+      const timeToEmptyFirst = batData.map((b) => b.timeToEmpty).find((t) => t !== null) ?? null;
+      const timeToFullFirst = batData.map((b) => b.timeToFull).find((t) => t !== null) ?? null;
+      const timeRaw = anyCharging ? (timeToFullFirst ?? timeToEmptyFirst) : timeToEmptyFirst;
+
+      const cycleCounts = batData.map((b) => b.cycles ? parseInt(b.cycles, 10) : null).filter((c): c is number => c !== null);
+      const cycleCount = cycleCounts.length > 0 ? Math.max(...cycleCounts) : null;
+
+      const temps = batData.map((b) => b.temp ? parseInt(b.temp, 10) : null).filter((t): t is number => t !== null);
+      const avgTempRaw = temps.length > 0 ? temps.reduce((a, b) => a + b, 0) / temps.length : null;
 
       return {
         hasBattery: true,
-        charging: status === "Charging",
-        acPowered: (acOnline?.some((l) => l === "1") ?? false) || status === "Charging" || status === "Full",
-        percent: capacity ? parseInt(capacity, 10) : 0,
-        timeRemainingMin: (() => {
-          const raw = status === "Charging" ? (timeToFull ?? timeToEmpty) : timeToEmpty;
-          return raw ? Math.round(parseInt(raw, 10) / 60) : null;
-        })(),
-        cycleCount: cycles ? parseInt(cycles, 10) : null,
-        designCapacity: fullDesignN,
-        maxCapacity: fullN,
-        capacityUnit: fullRaw !== null ? (usedEnergy ? 'Wh' : 'mAh') : null,
+        charging: anyCharging,
+        acPowered: (acOnline?.some((l) => l === "1") ?? false) || anyCharging || anyFull,
+        percent: overallPercent,
+        timeRemainingMin: timeRaw ? Math.round(parseInt(timeRaw, 10) / 60) : null,
+        cycleCount,
+        designCapacity: totalFullDesignRaw !== null ? Math.round(totalFullDesignRaw / divisor) : null,
+        maxCapacity: totalFullRaw !== null ? Math.round(totalFullRaw / divisor) : null,
+        capacityUnit: totalFullRaw !== null ? (usedEnergy ? 'Wh' : 'mAh') : null,
         healthPercent,
         condition: null,
-        temperatureC: temp ? parseInt(temp, 10) / 10 : null,
+        temperatureC: avgTempRaw !== null ? avgTempRaw / 10 : null,
       };
     } catch {
       return emptyBattery();
