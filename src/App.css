@@ -216,15 +216,6 @@ body {
   flex-shrink: 0;
 }
 
-@media (max-width: 1100px) {
-  .metrics-panel {
-    grid-template-columns: 1fr 1fr;
-  }
-  .battery-health {
-    grid-column: span 2;
-  }
-}
-
 /* Graph Cards */
 .cpu-graph,
 .memory-graph,
@@ -842,6 +833,15 @@ body {
 
   .shortcuts {
     display: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .metrics-panel {
+    grid-template-columns: 1fr 1fr;
+  }
+  .battery-health {
+    grid-column: span 2;
   }
 }
 
