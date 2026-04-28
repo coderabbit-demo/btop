@@ -20,6 +20,21 @@ export interface CpuUsage {
   idle: number;
 }
 
+export interface BatteryInfo {
+  hasBattery: boolean;
+  charging: boolean;
+  acPowered: boolean;
+  percent: number;
+  timeRemainingMin: number | null;
+  cycleCount: number | null;
+  designCapacity: number | null;
+  maxCapacity: number | null;
+  capacityUnit: 'mAh' | 'Wh' | null;
+  healthPercent: number | null;
+  condition: string | null;
+  temperatureC: number | null;
+}
+
 export interface SystemMetrics {
   hostname: string;
   platform: string;
@@ -35,6 +50,7 @@ export interface SystemMetrics {
   memPercent: number;
   processes: ProcessInfo[];
   processCount: number;
+  battery: BatteryInfo;
   timestamp: number;
 }
 

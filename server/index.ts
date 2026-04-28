@@ -26,6 +26,21 @@ interface CpuUsage {
   idle: number;
 }
 
+interface BatteryInfo {
+  hasBattery: boolean;
+  charging: boolean;
+  acPowered: boolean;
+  percent: number;
+  timeRemainingMin: number | null;
+  cycleCount: number | null;
+  designCapacity: number | null;
+  maxCapacity: number | null;
+  capacityUnit: 'mAh' | 'Wh' | null;
+  healthPercent: number | null;
+  condition: string | null;
+  temperatureC: number | null;
+}
+
 interface SystemMetrics {
   hostname: string;
   platform: string;
@@ -41,6 +56,7 @@ interface SystemMetrics {
   memPercent: number;
   processes: ProcessInfo[];
   processCount: number;
+  battery: BatteryInfo;
   timestamp: number;
 }
 
@@ -228,10 +244,190 @@ async function getMemoryInfo(): Promise<{ total: number; free: number; used: num
   };
 }
 
+function emptyBattery(): BatteryInfo {
+  return {
+    hasBattery: false,
+    charging: false,
+    acPowered: false,
+    percent: 0,
+    timeRemainingMin: null,
+    cycleCount: null,
+    designCapacity: null,
+    maxCapacity: null,
+    capacityUnit: null,
+    healthPercent: null,
+    condition: null,
+    temperatureC: null,
+  };
+}
+
+async function getBatteryInfo(): Promise<BatteryInfo> {
+  const os = platform();
+
+  if (os === "darwin") {
+    try {
+      const [pmsetOut, ioregOut] = await Promise.all([
+        execAsync("pmset -g batt").then((r) => r.stdout).catch(() => ""),
+        execAsync("ioreg -rn AppleSmartBattery").then((r) => r.stdout).catch(() => ""),
+      ]);
+
+      if (!pmsetOut && !ioregOut) return emptyBattery();
+
+      // pmset output example:
+      // Now drawing from 'Battery Power'
+      //  -InternalBattery-0 (id=...)	87%; discharging; 5:12 remaining present: true
+      const acPowered = /AC Power/i.test(pmsetOut);
+      const chargingMatch = /\b(charging|charged|finishing charge)\b/i.exec(pmsetOut);
+      const percentMatch = /(\d+)%/.exec(pmsetOut);
+      const timeMatch = /(\d+):(\d{2})\s+remaining/i.exec(pmsetOut);
+
+      const ioregNum = (key: string): number | null => {
+        const m = new RegExp(`"${key}"\\s*=\\s*(\\d+)`).exec(ioregOut);
+        return m ? parseInt(m[1], 10) : null;
+      };
+      const ioregStr = (key: string): string | null => {
+        const m = new RegExp(`"${key}"\\s*=\\s*"([^"]+)"`).exec(ioregOut);
+        return m ? m[1] : null;
+      };
+
+      const designCapacity = ioregNum("DesignCapacity");
+      const maxCapacity = ioregNum("AppleRawMaxCapacity") ?? ioregNum("MaxCapacity");
+      const cycleCount = ioregNum("CycleCount");
+      const condition = ioregStr("BatteryHealth") ?? ioregStr("PermanentFailureStatus");
+      const tempRaw = ioregNum("Temperature"); // hundredths of a degree C
+
+      const healthPercent =
+        designCapacity != null && maxCapacity != null && designCapacity > 0
+          ? Math.min(100, Math.round((maxCapacity / designCapacity) * 100))
+          : null;
+
+      const hasBattery = percentMatch !== null || maxCapacity !== null;
+      if (!hasBattery) return emptyBattery();
+
+      return {
+        hasBattery: true,
+        charging: chargingMatch ? /charging|finishing charge/i.test(chargingMatch[0]) : false,
+        acPowered,
+        percent: percentMatch ? parseInt(percentMatch[1], 10) : 0,
+        timeRemainingMin: timeMatch ? parseInt(timeMatch[1], 10) * 60 + parseInt(timeMatch[2], 10) : null,
+        cycleCount,
+        designCapacity,
+        maxCapacity,
+        capacityUnit: 'mAh',
+        healthPercent,
+        condition,
+        temperatureC: tempRaw !== null ? Math.round(tempRaw / 10) / 10 : null,
+      };
+    } catch {
+      return emptyBattery();
+    }
+  }
+
+  if (os === "linux") {
+    try {
+      const { stdout: ls } = await execAsync("ls /sys/class/power_supply 2>/dev/null").catch(() => ({ stdout: "" }));
+      const entries = ls.split("\n").map((s) => s.trim()).filter(Boolean);
+      const batEntries = entries.filter((e) => /^BAT/i.test(e));
+      if (batEntries.length === 0) return emptyBattery();
+
+      const readBat = async (name: string) => {
+        const base = `/sys/class/power_supply/${name}`;
+        const rd = async (file: string): Promise<string | null> => {
+          try {
+            const { stdout } = await execAsync(`cat ${base}/${file}`);
+            return stdout.trim();
+          } catch {
+            return null;
+          }
+        };
+        const [status, capacity, energyNow, energyFull, energyFullDesign, chargeNow, chargeFull, chargeFullDesign, cycles, timeToEmpty, timeToFull, temp] =
+          await Promise.all([
+            rd("status"),
+            rd("capacity"),
+            rd("energy_now"),
+            rd("energy_full"),
+            rd("energy_full_design"),
+            rd("charge_now"),
+            rd("charge_full"),
+            rd("charge_full_design"),
+            rd("cycle_count"),
+            rd("time_to_empty_now"),
+            rd("time_to_full_now"),
+            rd("temp"),
+          ]);
+        const usedEnergy = energyFull !== null;
+        const now = energyNow ?? chargeNow;
+        const full = energyFull ?? chargeFull;
+        const fullDesign = energyFullDesign ?? chargeFullDesign;
+        return { status, capacity, now, full, fullDesign, cycles, timeToEmpty, timeToFull, temp, usedEnergy };
+      };
+
+      const [batData, acOnline] = await Promise.all([
+        Promise.all(batEntries.map(readBat)),
+        execAsync("cat /sys/class/power_supply/A*/online 2>/dev/null").then((r) => r.stdout.split('\n').map((l) => l.trim())).catch(() => null),
+      ]);
+
+      const usedEnergy = batData.some((b) => b.usedEnergy);
+      // energy_* files are in µWh → convert to Wh; charge_* files are in µAh → convert to mAh
+      const divisor = usedEnergy ? 1_000_000 : 1_000;
+
+      const totalFullRaw = batData.reduce((sum, b) => b.full ? sum + parseInt(b.full, 10) : sum, 0) || null;
+      const totalFullDesignRaw = batData.reduce((sum, b) => b.fullDesign ? sum + parseInt(b.fullDesign, 10) : sum, 0) || null;
+      const totalNowRaw = batData.reduce((sum, b) => b.now ? sum + parseInt(b.now, 10) : sum, 0);
+      const hasNowData = batData.some((b) => b.now !== null);
+
+      const overallPercent = hasNowData && totalFullRaw !== null
+        ? Math.min(100, Math.round((totalNowRaw / totalFullRaw) * 100))
+        : (() => {
+            const caps = batData.map((b) => b.capacity ? parseInt(b.capacity, 10) : null).filter((c): c is number => c !== null);
+            return caps.length > 0 ? Math.round(caps.reduce((a, b) => a + b, 0) / caps.length) : 0;
+          })();
+
+      const healthPercent =
+        totalFullRaw !== null && totalFullDesignRaw !== null
+          ? Math.min(100, Math.round((totalFullRaw / totalFullDesignRaw) * 100))
+          : null;
+
+      const anyCharging = batData.some((b) => b.status === "Charging");
+      const anyFull = batData.some((b) => b.status === "Full");
+
+      const timeToEmptyFirst = batData.map((b) => b.timeToEmpty).find((t) => t !== null) ?? null;
+      const timeToFullFirst = batData.map((b) => b.timeToFull).find((t) => t !== null) ?? null;
+      const timeRaw = anyCharging ? (timeToFullFirst ?? timeToEmptyFirst) : timeToEmptyFirst;
+
+      const cycleCounts = batData.map((b) => b.cycles ? parseInt(b.cycles, 10) : null).filter((c): c is number => c !== null);
+      const cycleCount = cycleCounts.length > 0 ? Math.max(...cycleCounts) : null;
+
+      const temps = batData.map((b) => b.temp ? parseInt(b.temp, 10) : null).filter((t): t is number => t !== null);
+      const avgTempRaw = temps.length > 0 ? temps.reduce((a, b) => a + b, 0) / temps.length : null;
+
+      return {
+        hasBattery: true,
+        charging: anyCharging,
+        acPowered: (acOnline?.some((l) => l === "1") ?? false) || anyCharging || anyFull,
+        percent: overallPercent,
+        timeRemainingMin: timeRaw ? Math.round(parseInt(timeRaw, 10) / 60) : null,
+        cycleCount,
+        designCapacity: totalFullDesignRaw !== null ? Math.round(totalFullDesignRaw / divisor) : null,
+        maxCapacity: totalFullRaw !== null ? Math.round(totalFullRaw / divisor) : null,
+        capacityUnit: totalFullRaw !== null ? (usedEnergy ? 'Wh' : 'mAh') : null,
+        healthPercent,
+        condition: null,
+        temperatureC: avgTempRaw !== null ? avgTempRaw / 10 : null,
+      };
+    } catch {
+      return emptyBattery();
+    }
+  }
+
+  return emptyBattery();
+}
+
 async function getSystemMetrics(): Promise<SystemMetrics> {
   const cpuInfo = cpus();
   const memInfo = await getMemoryInfo();
   const processes = await getProcesses();
+  const battery = await getBatteryInfo();
 
   return {
     hostname: hostname(),
@@ -248,6 +444,7 @@ async function getSystemMetrics(): Promise<SystemMetrics> {
     memPercent: memInfo.percent,
     processes,
     processCount: processes.length,
+    battery,
     timestamp: Date.now(),
   };
 }
