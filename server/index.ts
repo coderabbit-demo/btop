@@ -4,6 +4,20 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
+// Parse command-line flags
+const args = process.argv.slice(2);
+const DEBUG = args.includes("--debug");
+
+function debug(...messages: unknown[]) {
+  if (DEBUG) {
+    console.log(`[DEBUG ${new Date().toISOString()}]`, ...messages);
+  }
+}
+
+if (DEBUG) {
+  console.log("🐛 Debug mode enabled");
+}
+
 interface ProcessInfo {
   pid: number;
   user: string;
@@ -48,6 +62,7 @@ interface SystemMetrics {
 let prevCpuTimes: { user: number; nice: number; sys: number; idle: number; irq: number }[] = [];
 
 function getCpuUsage(): CpuUsage[] {
+  debug("Collecting CPU usage");
   const cpuInfo = cpus();
   const usage: CpuUsage[] = [];
 
@@ -92,6 +107,7 @@ function getCpuUsage(): CpuUsage[] {
 }
 
 async function getProcesses(): Promise<ProcessInfo[]> {
+  debug("Fetching process list");
   const os = platform();
   let command: string;
 
@@ -128,6 +144,7 @@ async function getProcesses(): Promise<ProcessInfo[]> {
       }
     }
 
+    debug(`Found ${processes.length} processes`);
     return processes;
   } catch (error) {
     console.error("Error getting processes:", error);
@@ -229,6 +246,7 @@ async function getMemoryInfo(): Promise<{ total: number; free: number; used: num
 }
 
 async function getSystemMetrics(): Promise<SystemMetrics> {
+  debug("Collecting system metrics");
   const cpuInfo = cpus();
   const memInfo = await getMemoryInfo();
   const processes = await getProcesses();
@@ -263,6 +281,8 @@ const server = Bun.serve({
       "Access-Control-Allow-Methods": "GET, OPTIONS",
       "Access-Control-Allow-Headers": "Content-Type",
     };
+
+    debug(`${req.method} ${url.pathname}`);
 
     if (req.method === "OPTIONS") {
       return new Response(null, { headers: corsHeaders });
