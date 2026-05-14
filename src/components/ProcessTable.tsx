@@ -79,21 +79,22 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
     return sortDirection === 'asc' ? '▲' : '▼';
   };
 
-  const getCpuColor = (cpu: number): string => {
-    if (cpu < 10) return 'var(--color-text)';
-    if (cpu < 30) return 'var(--color-green)';
-    if (cpu < 60) return 'var(--color-yellow)';
-    if (cpu < 85) return 'var(--color-orange)';
-    return 'var(--color-red)';
+  const getUsageColor = (value: number, thresholds: number[]): string => {
+    const colors = [
+      'var(--color-text)',
+      'var(--color-green)',
+      'var(--color-yellow)',
+      'var(--color-orange)',
+      'var(--color-red)',
+    ];
+    for (let i = 0; i < thresholds.length; i++) {
+      if (value < thresholds[i]) return colors[i];
+    }
+    return colors[colors.length - 1];
   };
 
-  const getMemColor = (mem: number): string => {
-    if (mem < 5) return 'var(--color-text)';
-    if (mem < 15) return 'var(--color-green)';
-    if (mem < 30) return 'var(--color-yellow)';
-    if (mem < 50) return 'var(--color-orange)';
-    return 'var(--color-red)';
-  };
+  const getCpuColor = (cpu: number) => getUsageColor(cpu, [10, 30, 60, 85]);
+  const getMemColor = (mem: number) => getUsageColor(mem, [5, 15, 30, 50]);
 
   return (
     <div className="process-table">
