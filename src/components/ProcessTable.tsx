@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import type { ProcessInfo, SortField, SortDirection } from '../types';
+import { ProcessDetailPanel } from './ProcessDetailPanel';
 
 interface ProcessTableProps {
   processes: ProcessInfo[];
@@ -10,6 +11,7 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
   const [sortField, setSortField] = useState<SortField>('cpu');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedPid, setSelectedPid] = useState<number | null>(null);
+  const [detailProcess, setDetailProcess] = useState<ProcessInfo | null>(null);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -139,6 +141,7 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
             key={process.pid}
             className={`table-row ${selectedPid === process.pid ? 'selected' : ''}`}
             onClick={() => setSelectedPid(process.pid === selectedPid ? null : process.pid)}
+            onDoubleClick={() => setDetailProcess(process)}
           >
             <span className="col-pid">{process.pid}</span>
             <span className="col-user">{process.user.substring(0, 8)}</span>
@@ -156,6 +159,13 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
           </div>
         ))}
       </div>
+
+      {detailProcess && (
+        <ProcessDetailPanel
+          process={detailProcess}
+          onClose={() => setDetailProcess(null)}
+        />
+      )}
     </div>
   );
 }
