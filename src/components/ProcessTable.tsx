@@ -96,39 +96,49 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
   };
 
   return (
-    <div className="process-table">
-      <div className="table-header">
+    <div className="process-table" role="table" aria-label="Process list">
+      <div className="table-header" role="row">
         <span
+          role="columnheader"
           className="col-pid sortable"
           onClick={() => handleSort('pid')}
+          aria-sort={sortField === 'pid' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
         >
           PID{getSortIndicator('pid')}
         </span>
         <span
+          role="columnheader"
           className="col-user sortable"
           onClick={() => handleSort('user')}
+          aria-sort={sortField === 'user' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
         >
           USER{getSortIndicator('user')}
         </span>
         <span
+          role="columnheader"
           className="col-cpu sortable"
           onClick={() => handleSort('cpu')}
+          aria-sort={sortField === 'cpu' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
         >
           CPU%{getSortIndicator('cpu')}
         </span>
         <span
+          role="columnheader"
           className="col-mem sortable"
           onClick={() => handleSort('mem')}
+          aria-sort={sortField === 'mem' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
         >
           MEM%{getSortIndicator('mem')}
         </span>
-        <span className="col-virt">VIRT</span>
-        <span className="col-res">RES</span>
-        <span className="col-state">S</span>
-        <span className="col-time">TIME</span>
+        <span role="columnheader" className="col-virt">VIRT</span>
+        <span role="columnheader" className="col-res">RES</span>
+        <span role="columnheader" className="col-state">S</span>
+        <span role="columnheader" className="col-time">TIME</span>
         <span
+          role="columnheader"
           className="col-command sortable"
           onClick={() => handleSort('command')}
+          aria-sort={sortField === 'command' ? (sortDirection === 'asc' ? 'ascending' : 'descending') : 'none'}
         >
           COMMAND{getSortIndicator('command')}
         </span>
@@ -137,8 +147,10 @@ export function ProcessTable({ processes, filter }: ProcessTableProps) {
         {filteredAndSortedProcesses.map((process) => (
           <div
             key={process.pid}
+            role="row"
             className={`table-row ${selectedPid === process.pid ? 'selected' : ''}`}
             onClick={() => setSelectedPid(process.pid === selectedPid ? null : process.pid)}
+            aria-selected={selectedPid === process.pid}
           >
             <span className="col-pid">{process.pid}</span>
             <span className="col-user">{process.user.substring(0, 8)}</span>
