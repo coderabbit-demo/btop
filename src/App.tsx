@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { Navbar } from './components/Navbar';
 import { Header } from './components/Header';
 import { CpuGraph } from './components/CpuGraph';
 import { MemoryGraph } from './components/MemoryGraph';
 import { ProcessTable } from './components/ProcessTable';
 import { StatusBar } from './components/StatusBar';
 import { EnvironmentPanel } from './components/EnvironmentPanel';
+import { DiskPanel } from './components/DiskPanel';
 import { useSystemMetrics } from './hooks/useSystemMetrics';
 import './App.css';
 
@@ -43,6 +45,7 @@ function App() {
 
   return (
     <div className="app">
+      <Navbar />
       <Header
         hostname={metrics.hostname}
         platform={metrics.platform}
@@ -68,6 +71,8 @@ function App() {
         </div>
         <ProcessTable processes={metrics.processes} filter={filter} />
       </div>
+
+      <DiskPanel refreshRate={refreshRate} />
 
       <EnvironmentPanel filter={filter} />
 

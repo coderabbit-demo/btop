@@ -322,6 +322,47 @@ const server = Bun.serve({
       });
     }
 
+    if (url.pathname === "/api/disks") {
+      // Report filesystem usage. An optional `path` narrows the report to a
+      // single mount point so the UI can drill into a specific volume.
+      const target = url.searchParams.get("path") || "/";
+
+      try {
+        const { stdout } = await execAsync(`df -k ${target}`);
+        const lines = stdout.trim().split("\n");
+        const disks = [];
+
+        for (let i = 1; i < lines.length; i++) {
+          const parts = lines[i].trim().split(/\s+/);
+          if (parts.length >= 6) {
+            disks.push({
+              filesystem: parts[0],
+              size: formatBytes(parseInt(parts[1], 10) * 1024),
+              used: formatBytes(parseInt(parts[2], 10) * 1024),
+              available: formatBytes(parseInt(parts[3], 10) * 1024),
+              capacity: parts[4],
+              mount: parts.slice(5).join(" "),
+            });
+          }
+        }
+
+        return new Response(JSON.stringify({ disks }), {
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        });
+      } catch (error) {
+        console.error("Error getting disk usage:", error);
+        return new Response(JSON.stringify({ disks: [] }), {
+          headers: {
+            "Content-Type": "application/json",
+            ...corsHeaders,
+          },
+        });
+      }
+    }
+
     return new Response("Not Found", { status: 404, headers: corsHeaders });
   },
 });
