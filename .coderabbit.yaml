@@ -1,24 +1,36 @@
 # yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+tone_instructions: Prefer concise responses (high information density, low fluff)
+inheritance: true
+
 reviews:
-  request_changes_workflow: true
-  review_details: true
-  fail_commit_status: true
+  profile: quiet
+  request_changes_workflow: false
+  collapse_walkthrough: true
+  changed_files_summary: false
+  sequence_diagrams: false
+  estimate_code_review_effort: false
+  auto_apply_labels: false
+  suggested_reviewers: false
+  in_progress_fortune: false
   poem: false
-  pre_merge_checks:
-    custom_checks:
-      - mode: error
-        name: min-level
-        instructions: >-
-          Fail the status check if you find any SECURITY RELATED major or critical issues. Do not
-          fail the status check if there are trivial, nitpick, or minor issues, or not related to
-          security.
+
+  high_level_summary: true
+  high_level_summary_instructions: "Give a brief description of the changes in 50 words or less."
+  high_level_summary_in_walkthrough: false
+
+  auto_review:
+    auto_incremental_review: true
   finishing_touches:
     docstrings:
       enabled: false
     unit_tests:
       enabled: false
-    custom:
-      - name: Update AGENTS.md
-        instructions: Update AGENTS.md based on comments on this PR
-chat:
-  art: false
+
+
+knowledge_base:
+  automatic_repository_linking: true
+  issues:
+    scope: local
+  pull_requests:
+    scope: local
